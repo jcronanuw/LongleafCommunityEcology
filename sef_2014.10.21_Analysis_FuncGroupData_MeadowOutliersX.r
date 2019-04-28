@@ -27,7 +27,7 @@ library(labdsv)#Brooke's recommendation
 
 
 #Set working directory
-setwd("C:/Users/jcronan/Documents/GitHub/LongleafCommunityEcology")
+setwd("C:/Users/jcronan/Documents/GitHub/LongleafCommunityEcology/Inputs")
 
 #########################################################
 #2A: Open biomass data
@@ -36,7 +36,7 @@ setwd("C:/Users/jcronan/Documents/GitHub/LongleafCommunityEcology")
 #across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
 #have been removed.
 plotBiomass <- read.table(
-  "sef_Ecology_BiomassPlotMatrix_Ep1_FuncGroupOulierX_2014-10-21_10.13.08.csv", 
+  "sef_Ecology_BiomassPlotMatrix_Ep1_FuncGroupOutlierX_2014-10-21_10.13.08.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
@@ -53,13 +53,13 @@ plotBiomass2 <- plotBiomass[,!colnames(plotBiomass) == "dead.woody"]
 #USED FOR DATA SCREENING ONLY - DATA NOT USED IN ANALYSIS.
 
 #Calculate untransformed site means from plot-level data 
-siteBiomass <- summarize(X = plotBiomass2[,3:length(plotBiomass2[1,])], by = plotBiomass2$siteName, 
-                         colMeans, stat.name = colnames(plotBiomass2)[3])
+siteBiomass <- summarize(X = plotBiomass2[,4:length(plotBiomass2[1,])], by = plotBiomass2$SiteNo, 
+                         colMeans, stat.name = colnames(plotBiomass2)[4])
 colnames(siteBiomass)[1] <- "siteName"
 
 #Remove site names from matrix columns and assign as row names.
 #All biomass >> UNTRANSFORMED
-siteBiomass2 <- siteBiomass[,2:(length(siteBiomass[1,]))]
+siteBiomass2 <- siteBiomass[,3:(length(siteBiomass[1,]))]
 rownames(siteBiomass2) <- siteBiomass[,1]
 
 #########################################################
@@ -67,17 +67,17 @@ rownames(siteBiomass2) <- siteBiomass[,1]
 
 #Conduct log-transformation on plot-level data
 #>>>>Justification for log-transformation?
-plotBiomassLogTrans <- data.trans(plotBiomass2[,3:length(plotBiomass2[1,])], method = 'log', 
+plotBiomassLogTrans <- data.trans(plotBiomass2[,4:length(plotBiomass2[1,])], method = 'log', 
                                   plot = F)
 
 #Calculate site means from log-transformed plot-level data (USED IN ANALYSIS)
 siteBiomassLogTrans <- summarize(X = plotBiomassLogTrans, by = plotBiomass$siteName, colMeans, 
-                                 stat.name = colnames(plotBiomass)[3])
+                                 stat.name = colnames(plotBiomass)[4])
 colnames(siteBiomassLogTrans)[1] <- "siteName"
 
 #Remove site names from matrix columns and assign as row names.
 #All biomass >> LOG-TRANSFORMED
-siteBiomassLogTrans2 <- siteBiomassLogTrans[,2:(length(siteBiomassLogTrans[1,]))]
+siteBiomassLogTrans2 <- siteBiomassLogTrans[,3:(length(siteBiomassLogTrans[1,]))]
 rownames(siteBiomassLogTrans2) <- siteBiomassLogTrans[,1]
 
 ###################################################################################################
@@ -91,7 +91,7 @@ rownames(siteBiomassLogTrans2) <- siteBiomassLogTrans[,1]
 #across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
 #have been removed.
 plotCover <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_CoverPlotMatrix_Ep1_FuncGroupOulierX_2014-10-21_10.13.08.csv", 
+  "sef_Ecology_CoverPlotMatrix_Ep1_OriginalOutlierX_2014-08-21_17.24.49.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
@@ -128,18 +128,18 @@ rownames(siteCover2) <- siteCover[,1]
 #########################################################
 #4a: Open environmental matrix
 siteEnv <- read.table(
-  "C:/usfs_sef_data_output/2014.03.13_EnvironmentalMatrix.csv", 
+  "2014.03.13_EnvironmentalMatrix.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
 #########################################################
 #4b: Re-assign column 1 (site names) to  a row name.
-siteEnv2 <- siteEnv[,2:(length(siteEnv[1,]))]
-rownames(siteEnv2) <- siteEnv[,1]
+siteEnv2 <- siteEnv[,3:(length(siteEnv[1,]))]
+rownames(siteEnv2) <- siteEnv[,2]
 
 #########################################################
 #4c: Environmental data, remove data you will not analyze
-siteEnv3 <- siteEnv2[,-c(12,13)]
+siteEnv3 <- siteEnv2[-c(12,13)]
 #Column 12 is soil drainage. This data is from USDA Soil Survey and not accurate
 #Column 13 is region. Only two regions, at this point I don't believe this adds 
 #substance to the analysis because there are no physical properties for each region
@@ -819,7 +819,15 @@ dev.off()
 set.panel(2,4)
 cf <- 0.5
 
-#1-2
+#Create ab2mat object
+ab2mat <- biomassOrig
+ab2mat <- ab2mat[sort(row.names(ab2mat)),]
+
+#Create an emat object
+emat <- siteEnv3
+emat <- emat[sort(row.names(emat)),]
+
+#1
 #Forb
 #Plot with sites
 genus <- ab2mat$forb
@@ -828,43 +836,110 @@ Genus <- "Forb"
 #Boundary layer regression
 blr(log, emat$FireRotation, genus, Genus)
 
-#3-11
+#2
 #Grass
 #Plot with sites
-genus <- ab2mat$grass + ab2mat$bluestem
-Genus <- "Graminoid (ex. Aristida)"
+genus <- ab2mat$bunchgrass + ab2mat$grass
+Genus <- "All Graminoids"
+
+#Boundary layer regression
+blr(log, emat$FireRotation, genus, Genus)
+
+#3
+#Wiregrass
+#Plot with sites
+genus <- ab2mat$bunchgrass
+Genus <- "Bunchgrass"
+
+#Boundary layer regression
+blr(log, emat$FireRotation, genus, Genus)
+
+#4
+#Rhizotomous Grasses
+#Plot with sites
+genus <- ab2mat$grass
+Genus <- "Rhizomatous Grass"
+
+#Boundary layer regression
+blr(log, emat$FireRotation, genus, Genus)
+
+
+#5
+#Palmetto
+#Plot with sites
+genus <- ab2mat$palmetto
+Genus <- "Palmetto"
+
+#Boundary layer regression
+blr(log, emat$FireRotation, genus, Genus)
+
+#6
+#Shrub
+#Plot with sites
+genus <- ab2mat$shrub + ab2mat$palmetto
+Genus <- "Shrubs"
+
+#Boundary layer regression
+blr(log, emat$FireRotation, genus, Genus)
+
+#7
+#Sub-shrub
+#Plot with sites
+genus <- ab2mat$subshrub
+Genus <- "Sub-shrubs"
+
+#Boundary layer regression
+blr(log, emat$FireRotation, genus, Genus)
+
+#8
+#Understory
+#Plot with sites
+genus <- ab2mat$understory
+Genus <- "Hardwood Trees"
+
+#Boundary layer regression
+blr(log, emat$FireRotation, genus, Genus)
+
+#9
+#Vines
+#Plot with sites
+genus <- ab2mat$vine
+Genus <- "Vines"
 
 #Boundary layer regression
 blr(log, emat$FireRotation, genus, Genus)
 
 #10
-#Wiregrass
+#All Shrubs
 #Plot with sites
-genus <- ab2mat$wiregrass
-Genus <- "Wiregrass"
+genus <- ab2mat$shrub + ab2mat$subshrub + ab2mat$palmetto
+Genus <- "All Shrubs"
+
+#Boundary layer regression
+blr(log, emat$FireRotation, genus, Genus)
+
+#11
+#All woody
+#Plot with sites
+genus <- ab2mat$shrub + ab2mat$subshrub + ab2mat$palmetto + ab2mat$understory + ab2mat$vine
+Genus <- "Woody"
 
 #Boundary layer regression
 blr(log, emat$FireRotation, genus, Genus)
 
 
-#12
-#Yucca
-#Plot with sites
-genus <- ab2mat$yucca
-Genus <- "Yucca"
 
-#Boundary layer regression
-blr(log, emat$FireRotation, genus, Genus)
+
 
 ###################################################################################################
-#1-2
+#1
 #Forb
 #Plot with sites
-genus <- ab2mat$dead.forb + ab2mat$live.forb
+genus <- ab2mat$forb
 Genus <- "Forb"
 plot(emat$FireRotation, genus, type = "n", 
      xlab = "Fire Rotation (years)", ylab = "Biomass (Mg/ha)")
-text(emat$FireRotation, genus, labels = row.names(ab2mat), cex = cf)
+text(emat$FireRotation, genus, labels = row.names(emat), cex = cf)
 
 
 #3-11
