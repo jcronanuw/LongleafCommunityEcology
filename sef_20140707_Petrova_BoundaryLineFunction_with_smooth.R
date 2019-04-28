@@ -14,30 +14,30 @@ library(boot)
 
 
 ### START data import and preparation ###
-setwd('C:\\Users\\Mirra\\Dropbox\\Flatwoods Community Ecology\\')
+setwd("C:\\Users\\jcronan\\Documents\\GitHub\\LongleafCommunityEcology\\Inputs")
 
 ### Data - Biomass
-plant <- read.csv('Plot Level Data\\sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOulierX_2014-05-05_15.00.18.csv', header = T)
+plant <- read.csv("sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOulierX_2014-05-05_15.00.18.csv", header = T)
 str(plant)
 plant$forb <- plant$live.forb + plant$dead.forb # combine the forbs
 plant2 <- aggregate(plant[, (3:59)], plant['siteName'], mean) #first two rows are non-numeric
-genus <- read.csv('Plot Level Data\\sef_Ecology_CoverPlotMatrix_Ep1_Genus2014-03-26_19.05.46vineCor.csv', header = T)
+genus <- read.csv("sef_Ecology_CoverPlotMatrix_Ep1_Genus2014-03-26_19.05.46vineCor.csv", header = T)
 str(genus)
-newdata <- read.csv('Plot Level Data\\sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOulierX_2014-05-05_15.00.18.csv', header = T)
+newdata <- read.csv("sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOulierX_2014-05-05_15.00.18.csv", header = T)
 str(newdata)
 
 
 
 ### Data - Cover
-plant <- read.csv('Plot Level Data\\sef_Ecology_BiomassPlotMatrix_Ep1_Plant_2014-03-26_15.30.55.csv', header = T)
+plant <- read.csv("sef_Ecology_BiomassPlotMatrix_Ep1_Plant_2014-03-26_15.30.55.csv", header = T)
 str(plant)
-genus <- read.csv('sef_Ecology_CoverSiteMatrix_Ep1_Genus_2013-12-27_16.08.22vineCor.csv', header = T)
+genus <- read.csv("sef_Ecology_CoverSiteMatrix_Ep1_Genus_2013-12-27_16.08.22vineCor.csv", header = T)
 str(genus)
 
 
 
 ### Environmental matrix
-env <- read.csv('2014.03.13_EnvironmentalMatrix.csv', header = T)
+env <- read.csv("2014.03.13_EnvironmentalMatrix.csv", header = T)
 str(env)
 ### subset to only have the variables needed for modeling - FireRotation
 env <- env[c("Site", "FireRotation")]
@@ -87,6 +87,8 @@ boundaryLine <- function(data, species)
 }
 
 # boundaryLine(data, 'forb')
+
+boundaryLine(data$FireRotation, data$titi)
 
 
 
