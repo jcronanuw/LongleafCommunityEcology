@@ -26,6 +26,9 @@ library(labdsv)#Brooke's recommendation
 #STEP #2: OPEN AND ADJUST BIOMASS DATA
 
 
+#Set working directory
+setwd("C:/Users/jcronan/Documents/GitHub/LongleafCommunityEcology")
+
 #########################################################
 #2A: Open biomass data
 
@@ -33,7 +36,7 @@ library(labdsv)#Brooke's recommendation
 #across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
 #have been removed.
 plotBiomass <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_BiomassPlotMatrix_Ep1_FuncGroupOulierX_2014-10-21_10.13.08.csv", 
+  "sef_Ecology_BiomassPlotMatrix_Ep1_FuncGroupOulierX_2014-10-21_10.13.08.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
