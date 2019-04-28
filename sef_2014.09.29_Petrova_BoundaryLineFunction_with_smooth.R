@@ -28,10 +28,12 @@ library(nlme)
 #########################################################
 #2A The steps below create a more appropriate dataset by combining some categories.
 
+#Set working directory
+setwd("C:/Users/jcronan/Documents/GitHub/LongleafCommunityEcology")
 
 ### Data - Biomass
 plant <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOulierX_2014-05-05_15.00.18.csv", 
+  "sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOulierX_2014-05-05_15.00.18.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 str(plant)
@@ -76,7 +78,7 @@ plotBiomass3 <- data.frame(plotBiomass2, forb = forb, dead.woody = dead.woody, p
 
 ### Data - Cover
 plotCover <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_CoverPlotMatrix_Ep1_OriginalOulierX_2014-08-21_17.24.49.csv", 
+  "sef_Ecology_CoverPlotMatrix_Ep1_OriginalOulierX_2014-08-21_17.24.49.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 str(plotCover)
@@ -90,7 +92,7 @@ str(plotCover)
 
 ### Environmental matrix
 env <- read.table(
-  "C:/usfs_sef_data_output/2014.03.13_EnvironmentalMatrix.csv", 
+  "2014.03.13_EnvironmentalMatrix.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 str(env)
@@ -149,9 +151,9 @@ boundaryLine <- function(data, species)
   
 }
 
-#boundaryLine(data, 'forb')
-#model <- lm(tempdf[,'y'] ~ log(tempdf[,'x']) ) # linear -log model
-#summary(model)
+boundaryLine(data, 'forb')
+model <- lm(tempdf[,'y'] ~ log(tempdf[,'x']) ) # linear -log model
+summary(model)
 
 #J Cronan >> code below is testing linear mixed effects model which is needed
 #to deal with pseudoreplication (plots) and probably also regional differences.
