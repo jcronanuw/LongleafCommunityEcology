@@ -16,10 +16,13 @@ library(Hmisc)
 library(PerformanceAnalytics)
 library(vegan)
 library(pastecs)
-library(simba)
+#library(simba)#Simba was removed from R CRAN in 2021.
 library(fields)#for set.panel()
 library(labdsv)#Brooke's recommendation
 
+
+#Set working directory
+setwd("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data/Understory_Vegetation_FlatFiles/stage_4_outliers_removed/outputs/")
 
 ###################################################################################################
 ###################################################################################################
@@ -32,10 +35,9 @@ library(labdsv)#Brooke's recommendation
 #Plot-level biomass data. This data has been modified so that vine species are consistent
 #across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
 #have been removed.
-plotBiomass <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOulierX_2014-05-05_15.00.18.csv", 
-  header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
-  stringsAsFactors = F)
+plotBiomass <- read.table("sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOutlierX.csv", 
+                          header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE, 
+                          stringsAsFactors = F)
 
 #########################################################
 #2B The steps below create a more appropriate dataset by combining some categories.
@@ -109,7 +111,7 @@ rownames(siteBiomassLogTrans2) <- siteBiomassLogTrans[,1]
 #across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
 #have been removed.
 plotCover <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_CoverPlotMatrix_Ep1_OriginalOulierX_2014-10-15_10.32.12.csv", 
+  "sef_Ecology_CoverPlotMatrix_Ep1_OriginalOutlierX.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
@@ -164,8 +166,13 @@ rownames(siteCover2) <- siteCover[,1]
 
 #########################################################
 #4a: Open environmental matrix
+
+#Set working directory
+setwd("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data/Fire_History/")
+
+#Open data
 siteEnv <- read.table(
-  "C:/usfs_sef_data_output/2014.03.13_EnvironmentalMatrix.csv", 
+  "2014.03.13_EnvironmentalMatrix.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
@@ -483,8 +490,9 @@ seA <- siteEnv4[re == 2,]
 #Create a histogram of primary and secondary dominance across sites by species.
 
 #Remove non-living categories (dead woody) from the biomass data
-ab2mat <- biomassOrig#send newer file name to old file name
-abhmat <- ab2mat[,-39]
+abhmat <- biomassOrig#send newer file name to old file name
+#abhmat <- ab2mat[,-39] -- removed 2022-10-01 -- this would have removed palmetto, no 
+#non-living categories present.
 
 #List of dominant species
 prim <- mapply(function(x) {colnames(abhmat)[order(abhmat[x,])][39]}, 1:length(abhmat[,1]))
