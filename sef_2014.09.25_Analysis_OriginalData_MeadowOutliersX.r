@@ -3,6 +3,14 @@
 #The purpose of this script is to explore the environmental data for the community ecology
 #multivariate analysis.
 
+#NOTE
+#This script was modified in October, 2022 and name was changed.
+#Script was maintained on GitHub (LongleafCommunityEcology repository) and previous 
+#modification occurred on 1-Jan-2020. Script name was changed from: 
+#sef_2014.09.25_Analysis_OriginalData_MeadowOutliersX_mod
+#to:
+#
+
 ###################################################################################################
 ###################################################################################################
 #STEP #1: ADMINISTRATIVE TASKS
@@ -16,7 +24,7 @@ library(Hmisc)
 library(PerformanceAnalytics)
 library(vegan)
 library(pastecs)
-library(simba)
+#library(simba) -- package no longer maintained on CRAN (Cronan - 2022-10-11)
 library(fields)#for set.panel()
 library(labdsv)#Brooke's recommendation
 
@@ -33,7 +41,7 @@ library(labdsv)#Brooke's recommendation
 #across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
 #have been removed.
 plotBiomass <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOulierX_2014-05-05_15.00.18.csv", 
+  "C:/Users/jcronan/OneDrive - USDA/Documents/GitHub/LongleafCommunityEcology/Inputs/sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOutlierX_2014-05-05_15.00.18.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
@@ -109,7 +117,7 @@ rownames(siteBiomassLogTrans2) <- siteBiomassLogTrans[,1]
 #across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
 #have been removed.
 plotCover <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_CoverPlotMatrix_Ep1_OriginalOulierX_2014-10-15_10.32.12.csv", 
+  "C:/Users/jcronan/OneDrive - USDA/Documents/GitHub/LongleafCommunityEcology/Inputs/sef_Ecology_CoverPlotMatrix_Ep1_OriginalOutlierX_2014-08-21_17.24.49.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
@@ -165,7 +173,7 @@ rownames(siteCover2) <- siteCover[,1]
 #########################################################
 #4a: Open environmental matrix
 siteEnv <- read.table(
-  "C:/usfs_sef_data_output/2014.03.13_EnvironmentalMatrix.csv", 
+  "C:/Users/jcronan/OneDrive - USDA/Documents/GitHub/LongleafCommunityEcology/Inputs/2014.03.13_EnvironmentalMatrix.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
@@ -462,10 +470,10 @@ chart.Correlation(co2, method = "pearson")
 #6c: Summary stats for environmental data
 
 #Show how environmental variables are correlated.
-chart.Correlation(siteEnv3)
+chart.Correlation(siteEnv3[,-1])
 
 #Effect of column-standardization on untransformed data.
-siteEnv4 <- data.stand(siteEnv3, method = 'total', margin = 'column', plot = F)
+siteEnv4 <- data.stand(siteEnv3[,-1], method = 'total', margin = 'column', plot = F)
 
 #Split data by region
 seE <- siteEnv4[re == 1,]
@@ -483,8 +491,8 @@ seA <- siteEnv4[re == 2,]
 #Create a histogram of primary and secondary dominance across sites by species.
 
 #Remove non-living categories (dead woody) from the biomass data
-ab2mat <- biomassOrig#send newer file name to old file name
-abhmat <- ab2mat[,-39]
+abhmat <- biomassOrig#send newer file name to old file name
+#abhmat <- ab2mat[,-39]
 
 #List of dominant species
 prim <- mapply(function(x) {colnames(abhmat)[order(abhmat[x,])][39]}, 1:length(abhmat[,1]))
@@ -493,8 +501,8 @@ seco <- mapply(function(x) {colnames(abhmat)[order(abhmat[x,])][38]}, 1:length(a
 dTable <- data.frame(Sites = I(rownames(ab2mat)), Primary = I(prim), Secondary = I(seco))
 
 udom <- unique(c(unique(dTable[,2]),unique(dTable[,3])))
-udomProper<- c("Ilex glabra", "Aristida stricta", "Lyonia ferruginea", "Serenoa repens", 
-               "Quercus spp. (fire impeders)", "Quercus minima", "Vaccinium corymbosum", 
+udomProper<- c("Ilex glabra", "Aristida stricta", "Lyonia ferruginea", "Quercus minima", 
+               "Quercus spp. (fire impeders)", "Serenoa repens", "Vaccinium corymbosum", 
                "Rhizomatour grasses")
 
 
@@ -616,7 +624,7 @@ x <- pcoaL2
 y <- bl2
 ##>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<##
 #Broken stick plot
-plot(x$eig/sum(pcoa1$eig)*100-bstick(21)*100,xlab = "PC", 
+plot(x$eig/sum(pcoaO1$eig)*100-bstick(21)*100,xlab = "PC", 
      ylab="Actual-random % variation explained")
 abline(h=0)
 
@@ -805,7 +813,7 @@ lb2matR1 <- lb2mat[-(row.names(lb2mat) == "E100B-E"),]
 y <- vector('numeric', length = 1000)
 for (i in 1:1000)
 {
-gcap1 <- capscale(bo2 ~ FireRotation + BurnFreeInterval + Season + RxFireMgmt, 
+gcap1 <- capscale(bo2 ~ FireRotation + Season + RxFireMgmt, 
                   data = siteEnv4, distance = "manhattan")
 
 gcap1s <- summary(gcap1)
@@ -829,7 +837,7 @@ y <- vector('numeric', length = 1000)
 for (i in 1:1000)
 {
   
-gcap2a <- capscale(bo2 ~ FireRotation + BurnFreeInterval + Season + RxFireMgmt, 
+gcap2a <- capscale(bo2 ~ FireRotation + Season + RxFireMgmt, 
                   data = siteEnv4, distance = "bray")
 
 gcap2as <- summary(gcap2a)
@@ -2051,15 +2059,7 @@ text(ev, genus, labels = row.names(ab2mat), cex = cf)
 
 
 
-
-
-
-
-
-
-
-
-
+dev.off()
 
 
 
