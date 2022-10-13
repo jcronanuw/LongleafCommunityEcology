@@ -29,6 +29,9 @@ library(fields)#for set.panel()
 library(labdsv)#Brooke's recommendation
 
 
+#Set working directory
+setwd("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data/Understory_Vegetation_FlatFiles/stage_4_outliers_removed/outputs/")
+
 ###################################################################################################
 ###################################################################################################
 #STEP #2: OPEN AND ADJUST BIOMASS DATA
@@ -118,6 +121,7 @@ rownames(siteBiomassLogTrans2) <- siteBiomassLogTrans[,1]
 #have been removed.
 plotCover <- read.table(
   "C:/Users/jcronan/OneDrive - USDA/Documents/GitHub/LongleafCommunityEcology/Inputs/sef_Ecology_CoverPlotMatrix_Ep1_OriginalOutlierX_2014-08-21_17.24.49.csv", 
+
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
@@ -172,6 +176,15 @@ rownames(siteCover2) <- siteCover[,1]
 
 #########################################################
 #4a: Open environmental matrix
+
+#Set working directory
+setwd("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data/Fire_History/")
+
+#Open data
+siteEnv <- read.table("2014.03.13_EnvironmentalMatrix.csv", 
+                      header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE, stringsAsFactors = F)
+
+#Open data
 siteEnv <- read.table(
   "C:/Users/jcronan/OneDrive - USDA/Documents/GitHub/LongleafCommunityEcology/Inputs/2014.03.13_EnvironmentalMatrix.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
@@ -492,7 +505,8 @@ seA <- siteEnv4[re == 2,]
 
 #Remove non-living categories (dead woody) from the biomass data
 abhmat <- biomassOrig#send newer file name to old file name
-#abhmat <- ab2mat[,-39]
+#abhmat <- ab2mat[,-39] -- removed 2022-10-01 -- this would have removed palmetto, no 
+#non-living categories present.
 
 #List of dominant species
 prim <- mapply(function(x) {colnames(abhmat)[order(abhmat[x,])][39]}, 1:length(abhmat[,1]))
