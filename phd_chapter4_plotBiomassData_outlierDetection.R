@@ -10,7 +10,7 @@
 #to help locate plots that fall outside the site selection criteria for mesic pine flatwoods.
 
 #This script was re-habed/modified on 13-October-2022.
-#Unchanged script is first version on GitHub repo.
+#Unchanged script is first version on GitHub repo (push to remote on 13-Oct-2022 0930 EST.
 #Original script name: sef_2014.12.19_PlotBiomassData_OutlierDetection
 #Original script location: C:\Users\james\Box\01. james.cronan Workspace\Research\2009_01_SEF\r_scripts
 
@@ -31,27 +31,35 @@ library(fields)#for set.panel function
 ###################################################################################################
 #STEP #2: Open plot-level vine-corrected dataset
 
-#Open episode 1 biomass data matrix for all sites sampled in episode 1
+#Set working directory
+setwd(paste("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/", 
+"4_Chapter_4/Data/Understory_Vegetation_FlatFiles/stage_3_vine_class_corrected_data/outputs", sep = ""))
+
+
+#Open plot biomass data with field measurements standardized to a 2-year rough. This means
+# 2-yr post-fire (2011-2012; sampling episode 4) measurements for sites that were burned in 2009-2010 and pre-fire
+#(2009-2010; sampling episode 1) measurements for sites that were not burned.
 pbd1 <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_BiomassPlotMatrix_Ep1_Original_2014-12-18_10.37.56_vineCor.csv", 
-  header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
-  stringsAsFactors = F)
-
-#Open episode 1 biomass data matrix for all sites sampled in episode 3
-pbd3 <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_BiomassPlotMatrix_Ep3_Original_2014-12-18_10.37.56_vineCor.csv", 
-  header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
-  stringsAsFactors = F)
-
-#Open episode 1 biomass data matrix for all sites sampled in episode 4
-pbd4 <- read.table(
-  "C:/usfs_sef_data_output/sef_Ecology_BiomassPlotMatrix_Ep4_Original_2014-12-18_10.37.56_vineCor.csv", 
+  "20221011_Biomass_OriginalVegClasses_2yrRough_Episodes_1_andf_4.csv", 
   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
   stringsAsFactors = F)
 
 ###STOPPED HERE, NOT SURE I WANT TO DO THIS QUITE YET. THIS ISN'T REALLY NEEDED FOR THE MULTIVARIATE 
 #ANALYSIS SINCE ANY EFFECT IS LIKELY TO BE DROWNED OUT. MORE IMPORTANT FOR BOUNDARY LAYER REGRESSION
 #WHERE I AM LOOKING AT INDIVIDUAL SPECIES.
+
+#Above note was made prior to 2022 analysis. Not sure when. Could have been for 2019 conference presentation
+#or during earlier (2014) efforts on this analysis.
+
+
+
+
+
+
+
+
+
+
 
 ###################################################################################################
 ###################################################################################################
