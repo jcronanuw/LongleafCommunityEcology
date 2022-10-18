@@ -76,6 +76,16 @@ header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE)
 
 ###################################################################################################
 ###################################################################################################
+#
+#
+#                                               FUNCTIONAL GROUPS
+#
+#
+###################################################################################################
+###################################################################################################
+
+###################################################################################################
+###################################################################################################
 #STEP #3: CONVERT ORGINAL DATA TO PLANT FUNCTIONAL GROUPS
 
 ###################################################################################################
@@ -174,6 +184,62 @@ write.table(biomassGenus, file = paste("phd_chapter4_biomassPlotMatrix_2yr_Ep_1_
             sep = ",", eol = "\n", na = "NA", dec = ".", row.names = F, col.names = T, 
             qmethod = c("escape", "double"))#
 
+
+###################################################################################################
+###################################################################################################
+#
+#
+#                                               SPECIES (More or less)
+#
+#
+###################################################################################################
+###################################################################################################
+
+###################################################################################################
+###################################################################################################
+#STEP #7: CONVERT ORGINAL DATA TO Species, except where species was not noted, then classify
+#by next closest taxa.
+
+###################################################################################################
+#STEP #7a: Biomass data
+
+#Create a vector of unique genus
+bpsp <- sort(unique(biomassCross$abbreviation))
+
+#Create a data.frame to accept the functional group values.
+bsp <- data.frame(matrix(rep(0,length(plotBiomass[,1]) * length(bpsp)), 
+                         nrow = length(plotBiomass[,1]), 
+                         ncol = length(bpsp)))
+
+
+for(i in 1:length(bpsp))
+{
+  bsp[,i] <- apply(plotBiomass[colnames(plotBiomass) %in% 
+                                 biomassCross$original_name[biomassCross$abbreviation == bpsp[i]]],1,sum)
+}
+
+
+colnames(bsp) <- bpsp
+
+biomassSpecies <- data.frame(plotBiomass[,1:3], bsp)
+
+###################################################################################################
+###################################################################################################
+#STEP #8: Save relevant files
+
+#set a date used to name the file.
+dt <- Sys.Date()
+tm <- format(Sys.time(), format = "%H.%M.%S", 
+             tz = "", usetz = FALSE)
+
+setwd(paste("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4", 
+            "/Data/Understory_Vegetation_FlatFiles/stage_4_aggregate/outputs", sep = ""))
+
+#Save the plot-level biomass data.
+write.table(biomassSpecies, file = paste("phd_chapter4_biomassPlotMatrix_2yr_Ep_1_4_Species_", 
+                                       dt,"_",tm,".csv", sep = ""), append = F, quote = T, 
+            sep = ",", eol = "\n", na = "NA", dec = ".", row.names = F, col.names = T, 
+            qmethod = c("escape", "double"))#
 
 
 
