@@ -3,6 +3,19 @@
 #The purpose of this script is to explore the environmental data for the community ecology
 #multivariate analysis.
 
+#NOTE
+#This script was modified in October, 2022 and name was changed.
+#Script was maintained on GitHub (LongleafCommunityEcology repository) and previous 
+#modification occurred on 1-Jan-2020. Script name was changed from: 
+#sef_2014.09.25_Analysis_OriginalData_MeadowOutliersX_mod
+#to:
+#
+
+#Which computer are you using?
+#Forest Service>>>>>>> FS
+#Personal >>>>>>>>>>>> JC
+computer <- "FS"
+
 ###################################################################################################
 ###################################################################################################
 #STEP #1: ADMINISTRATIVE TASKS
@@ -16,65 +29,42 @@ library(Hmisc)
 library(PerformanceAnalytics)
 library(vegan)
 library(pastecs)
-#library(simba)#Simba was removed from R CRAN in 2021.
+#library(simba) -- package no longer maintained on CRAN (Cronan - 2022-10-11)
 library(fields)#for set.panel()
 library(labdsv)#Brooke's recommendation
 
 
 #Set working directory
-setwd("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data/Understory_Vegetation_FlatFiles/stage_4_outliers_removed/outputs/")
+if(computer == "FS")
+{
+  setwd("C:/Users/jcronan/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data")
+} else
+{
+  setwd("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data")
+}
 
 ###################################################################################################
 ###################################################################################################
 #STEP #2: OPEN AND ADJUST BIOMASS DATA
 
-
 #########################################################
 #2A: Open biomass data
 
 #Plot-level biomass data. This data has been modified so that vine species are consistent
-#across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
-#have been removed.
-plotBiomass <- read.table("sef_Ecology_BiomassPlotMatrix_Ep1_OriginalOutlierX.csv", 
-                          header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE, 
+#across all sites.
+#Outlier sites have not been removed.
+plotBiomass <- read.table(paste("Understory_Vegetation_FlatFiles/stage_4_aggregate/outputs/", 
+                                "phd_chapter4_biomassPlotMatrix_2yr_Ep_1_4_Genus_2022-10-13_10.31.37.csv",
+                                sep = ""), header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
                           stringsAsFactors = F)
-
-#########################################################
-#2B The steps below create a more appropriate dataset by combining some categories.
-
-#Combine like categories
-#Dead forb and live forb > these are being combined because some sites were sampled in 
-#winter and some in summer so live or dead forb loadings are an indication of season
-#rather then site differences.
-forb <- plotBiomass$live.forb + plotBiomass$dead.forb
-
-#Dead shrub, dead tree, and dead palmetto
-#Isolate standing dead fuels, I don't think I will use them in the analysis
-dead.woody <- plotBiomass$dead.shrub + plotBiomass$dead.tree + plotBiomass$dead.palmetto
-
-#Rename live palmetto
-palmetto <- plotBiomass$live.palmetto
-
-#Bluestem and grasses
-#The grass will be difficult to interpret in the analysis because it contains a mixture of 
-#primarily rhizomatous grasses but also bunch grasses that were not wiregrass or bluestem.
-
-#Remove original categories that were combined into new categories in the steps above.
-plotBiomass2 <- plotBiomass[,!colnames(plotBiomass) %in% c("live.forb", "dead.forb", 
-                                                           "dead.shrub", "dead.tree", 
-                                                           "live.palmetto", 
-                                                           "dead.palmetto")]
-
-#Add in new category columns
-plotBiomass3 <- data.frame(plotBiomass2, forb = forb, palmetto = palmetto)
 
 #########################################################
 #2C: calculate site means for untransformed plot-level data.
 #USED FOR DATA SCREENING ONLY - DATA NOT USED IN ANALYSIS.
 
 #Calculate untransformed site means from plot-level data 
-siteBiomass <- summarize(X = plotBiomass3[,3:length(plotBiomass3[1,])], by = plotBiomass3$siteName, 
-                         colMeans, stat.name = colnames(plotBiomass3)[3])
+siteBiomass <- summarize(X = plotBiomass[,4:length(plotBiomass[1,])], by = plotBiomass$siteName, 
+                         colMeans, stat.name = colnames(plotBiomass)[4])
 colnames(siteBiomass)[1] <- "siteName"
 
 #Remove site names from matrix columns and assign as row names.
@@ -87,12 +77,12 @@ rownames(siteBiomass2) <- siteBiomass[,1]
 
 #Conduct log-transformation on plot-level data
 #>>>>Justification for log-transformation?
-plotBiomassLogTrans <- data.trans(plotBiomass3[,3:length(plotBiomass3[1,])], method = 'log', 
+plotBiomassLogTrans <- data.trans(plotBiomass[,4:length(plotBiomass[1,])], method = 'log', 
                                   plot = F)
 
 #Calculate site means from log-transformed plot-level data (USED IN ANALYSIS)
-siteBiomassLogTrans <- summarize(X = plotBiomassLogTrans, by = plotBiomass3$siteName, colMeans, 
-                                 stat.name = colnames(plotBiomass3)[3])
+siteBiomassLogTrans <- summarize(X = plotBiomassLogTrans, by = plotBiomass$siteName, colMeans, 
+                                 stat.name = colnames(plotBiomass)[4])
 colnames(siteBiomassLogTrans)[1] <- "siteName"
 
 #Remove site names from matrix columns and assign as row names.
@@ -102,90 +92,26 @@ rownames(siteBiomassLogTrans2) <- siteBiomassLogTrans[,1]
 
 ###################################################################################################
 ###################################################################################################
-#STEP #3: OPEN AND ADJUST COVER DATA
-
-#########################################################
-#3A: Open cover data
-
-#Plot-level cover data. This data has been modified so that vine species are consistent
-#across all sites and outlier plots located in uncharacteristics areas of sites (wetlands or meadows) 
-#have been removed.
-plotCover <- read.table(
-  "sef_Ecology_CoverPlotMatrix_Ep1_OriginalOutlierX.csv", 
-  header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
-  stringsAsFactors = F)
-
-#########################################################
-#3B The steps below create a more appropriate dataset by removing and combining some categories.
-
-#For cover, remove non-plant categories, these are unecessary for our analysis.
-#litter, bare.soil
-plotCover2 <- plotCover[,!colnames(plotCover) %in% c("litter", "bare.soil")]
-
-#Combine like categories
-#Dead forb and live forb > these are being combined because some sites were sampled in 
-#winter and some in summer so live or dead forb loadings are an indication of season
-#rather then site differences.
-forb <- plotCover2$live.forb + plotCover2$dead.forb
-
-#Dead woody
-dead.woody <- plotCover2$dead.shrub + plotCover2$dead.tree + plotCover2$dead.palmetto
-
-#Rename live palmetto
-palmetto <- plotCover2$live.palmetto
-
-#Remove original categories that were combined into new categories in the steps above.
-plotCover3 <- plotCover2[,!colnames(plotCover2) %in% c("live.forb", "dead.forb", "live.palmetto", 
-                                            "dead.palmetto", "dead.shrub", "dead.tree")]
-
-#Add in new category columns
-plotCover4 <- data.frame(plotCover3, forb = forb, palmetto = palmetto)#did not add dead.woody
-
-#########################################################
-#3C: calculate site means for untransformed plot-level data.
-#USED FOR DATA SCREENING ONLY - DATA NOT USED IN ANALYSIS.
-
-#Calculate untransformed site means from plot-level data 
-siteCover <- summarize(X = plotCover4[,3:length(plotCover4[1,])], by = plotCover4$siteName, 
-                       colMeans, stat.name = colnames(plotCover4)[3])
-colnames(siteCover)[1] <- "siteName"
-
-#Remove site names from matrix columns and assign as row names.
-#All cover >> UNTRANSFORMED
-siteCover2 <- siteCover[,2:(length(siteCover[1,]))]
-rownames(siteCover2) <- siteCover[,1]
-
-#########################################################
-#3d: Conduct transformation on plot-level data and then calculate site means?
-#Is this necessary for cover data. This data is bounded (0-100) so a log-trans
-#may not be appropriate if data is not normal.
-
-###################################################################################################
-###################################################################################################
-#STEP #4: OPEN AND ADJUST ENVIRONMENTAL DATA
+#STEP #3: OPEN AND ADJUST ENVIRONMENTAL DATA
 
 #########################################################
 #4a: Open environmental matrix
 
-#Set working directory
-setwd("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data/Fire_History/")
-
 #Open data
-siteEnv <- read.table(
-  "2014.03.13_EnvironmentalMatrix.csv", 
-  header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
-  stringsAsFactors = F)
+siteEnv <- read.table(paste("Fire_History/", "phd_chapter4_environmentalData.csv", sep = ""), 
+  header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE, stringsAsFactors = F, fill = T)
 
 #########################################################
 #4b: Re-assign column 1 (site names) to  a row name.
-siteEnv2 <- siteEnv[,2:(length(siteEnv[1,]))]
+#Also remove column 2 (site numbers)
+siteEnv2 <- siteEnv[,3:(length(siteEnv[1,]))]
 rownames(siteEnv2) <- siteEnv[,1]
 
 #########################################################
 #4c: Environmental data, remove data you will not analyze
-siteEnv3 <- siteEnv2[,-c(12,13)]
-#Column 12 is soil drainage. This data is from USDA Soil Survey and not accurate
-#Column 13 is region. Only two regions, at this point I don't believe this adds 
+siteEnv3 <- siteEnv2[,-c(11,12)]
+#Column 11 is soil drainage. This data is from USDA Soil Survey and not accurate
+#Column 12 is region. Only two regions, at this point I don't believe this adds 
 #substance to the analysis because there are no physical properties for each region
 #that can confound how fire characteristics drive understory plant composition
 
@@ -212,33 +138,29 @@ siteBiomassLogTrans3 <- data.frame(so = ro2[,1], siteBiomassLogTrans2)
 siteBiomassLogTrans4 <- siteBiomassLogTrans3[order(siteBiomassLogTrans3$so),]
 siteBiomassLogTrans5 <- siteBiomassLogTrans4[,!colnames(siteBiomassLogTrans4) %in% c("so")]
 
-#Remove species with no occurences, this is necessary before you can use foa.plots below
+#Remove genus with no occurences, this is necessary before you can use foa.plots below
 biomassOrig <- drop.var(siteBiomass5, min.fo = 1)
 biomassLog <- drop.var(siteBiomassLogTrans5, min.fo = 1)
-coverOrig <- drop.var(siteCover2, min.fo = 1)
-
+#Show genus that were dropped:
+cbind(colnames(siteBiomass5), match(colnames(siteBiomass5), colnames(biomassOrig)))
+#dropped seven genus. From 40 to 33.
 
 ###################################################################################################
 #5b: Split by region
 
 #Create a vector that shows region as a factor (1 = Eglin and 2 = Apalachicola/St. Marks)
 rownames(biomassOrig)
-re <- c(1,2,2,2,1,1,2,1,2,1,2,2,2,1,1,2,1,2,1,1,1,2)
+re <- siteEnv$Region
 
 #Split datasets in two by region
 
 #For biomass (untranformed)
-bor1 <- biomassOrig[re == 1,]
-bor2 <- biomassOrig[re == 2,]
+bor1 <- biomassOrig[re == 1,]#Eglin (10 sites)
+bor2 <- biomassOrig[re == 2,]#Appalachicola/St. Marks (11 sites)
 
 #For biomass (log-tranformed)
-blr1 <- biomassLog[re == 1,]
-blr2 <- biomassLog[re == 2,]
-
-#For cover (untranformed)
-cor1 <- coverOrig[re == 1,]
-cor2 <- coverOrig[re == 2,]
-
+blr1 <- biomassLog[re == 1,]#Eglin (10 sites)
+blr2 <- biomassLog[re == 2,]#Appalachicola/St. Marks (11 sites)
 
 ###################################################################################################
 ###################################################################################################
@@ -253,34 +175,39 @@ round(stat.desc(biomassOrig),2)
 #Look at how data is distributed
 foa.plots(biomassOrig)
 
-#Cum. Number of Species vs Frequency of Occurrence
-#>> About 40 species total. Half (20) of those occur on at least half the sites
-#   The other half are uncommon and occur at less than 7 (total n = 22) sites.
+#Cum. Number of Species (aka Genus) vs Frequency of Occurrence
+#>> There are 33 genus of plants. Half (17) of those occur on 14 of the sites
+#   The other half are uncommon and occur at less than 7 (total n = 21) sites.
 
 #Cum. Number of Species vs Percent Occurrence
+#Not sure what "percent occurrence" (y-axis) means. How is this different than the prior chart?
 #>> Similar trend as above
+#   21 genus occur less than 50%
+#   12 genus have occurence greater than 70, with all but one higher than 90%
 
 #Histogram of Species Occurrence
-#>> Bimodal with largest peak in the 0-5 sites range and a smaller, flat peak in the 15-25 
-#   sites range.
+#>> Bimodal with largest peak in the 0-5 sites range and a smaller, trough in the 10-15 
+#   sites range and secondary peak in the 20-25 sites range.
 
 #Histogram of Log(Species Occurrence)
 #>> Not sure what this histogram is displaying but distrubution is more or less flat.
 
 #Cumulative Distribution of Species Mean Abundance
 #>> Exponentially increasing
+# This shows that about 5 genus are dominant (genus on steep curve)
+# and the remaining 28 genus have low biomass.
 
 #Species Occurrence vs Mean Abundance
-#>> Four species that occur at all sites have anomolously high abundance (palmetto, groundcover
-#   oak, gallberry, and wiregrass) while the most of the rest have low abundance. There are two
-#   outliers (shrub oak and rough fetterbush) that occur at fewer sites but have high abundance.
+#Genus with highest abundance have higher occurrence, but there are also many genus with high occurrence
+#and low abundance.
 
 #Species Occurrence vs Log(Mean Abunandance)
-#>> There is a weak (but probably significant) upward trend of increasing abundance with frequency
+#>> There is a weak (probably significant) upward trend of increasing abundance with frequency
 #   of occurrence.
 
 #Cumulative Distribution of Plot (Site) Richness.
-#>> there is a linear increase and the range is narrow (12-22 species per site)
+#>> Site richness doubles from 12 to 21 and increases on a steady slope across all sites. I.e., there are no
+#distinct groups of low and high richness plots, but rather a gradual transition from low to high.
 
 #Cumulative Distribution of Plot Total Abundance
 #>> There is a linear upward trend. Not sure what abundance is, loading?
@@ -295,6 +222,11 @@ foa.plots(biomassOrig)
 #   Outliers include:
 #   Low plot richness and high abundance: S209
 #   Medium plot richness and low abundance: E100B-W
+
+#Review distance measures
+rankindex(siteEnv3, biomassOrig, 
+          indices = c("manhattan", "euclidean", "canberra", "clark", "bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord"), 
+          stepacross = F, method = "spearman")
 
 #Drop rare species < 50% of sites.
 bo <- drop.var(biomassOrig, min.po=50)
@@ -364,6 +296,9 @@ uv.plots(boA)
 
 #What percent of values are zero, if it is over 50% you should consider changing the data
 #to presence/absence
+length(biomassOrig[biomassOrig == 0])/(length(biomassOrig[1,])*length(biomassOrig[,1]))
+#54% zero values >>> consider a binary transformation
+
 length(bo2[bo2 == 0])/(length(bo2[1,])*length(bo2[,1]))
 #13% zero values >>> do not do binary transformation
 length(bl2[bl2 == 0])/(length(bl2[1,])*length(bl2[,1]))
@@ -376,6 +311,7 @@ length(boA[boA == 0])/(length(boA[1,])*length(boA[,1]))
 
 
 #Look at correlation between species variables.
+chart.Correlation(biomassOrig, method = "pearson")
 chart.Correlation(bo2, method = "pearson")
 chart.Correlation(bl2, method = "pearson")
 chart.Correlation(boE, method = "pearson")
@@ -384,95 +320,13 @@ chart.Correlation(boA, method = "pearson")
 dev.off()
 
 #########################################################
-#6b: Summary stats for cover data
-
-#Summary stats
-round(stat.desc(coverOrig),2)
-
-#Look at how data is distributed
-foa.plots(coverOrig)
-
-#Cum. Number of Species vs Frequency of Occurrence
-#>> About 46 species total. About half (25) of those occur on at least one quarter the sites
-#   The other half occur at less than 6 (total n = 22) sites.
-
-#Cum. Number of Species vs Percent Occurrence
-#>> Similar trend as above. 50% occurrence is at 28 species
-
-#Histogram of Species Occurrence
-#>> Negative exponential although there is a small peak towards the right reflecting
-#   the bimodal nature of the biomass data.
-
-#Histogram of Log(Species Occurrence)
-#>> Not sure what this histogram is displaying but distrubution is more or less flat,
-#   even more so than the biomass data.
-
-#Cumulative Distribution of Species Mean Abundance
-#>> Exponentially increasing, even more so than the biomass data. Shows that
-#   most species have very low cover values (< 6%) and a few have cover values
-#   greater than 10%.
-
-#Species Occurrence vs Mean Abundance
-#>> Four species that occur at all sites have anomolously high abundance (palmetto, groundcover
-#   oak, gallberry, and wiregrass) while the most of the rest have low abundance. There is one
-#   outlier (rough fetterbush) that occurs at fewer sites but have medium abundance.
-
-#Species Occurrence vs Log(Mean Abunandance)
-#>> There is a weak (but probably significant) upward trend of increasing abundance with frequency
-#   of occurrence.
-#   As with the trend for biomass this indicates that sites are dominated by generalists, at
-#   lest for this habitat type.
-
-#Cumulative Distribution of Plot (Site) Richness.
-#>> there is a linear increase and the range is somewhat narrow (12-30 species per site)
-
-#Cumulative Distribution of Plot Total Abundance
-#>> There is a linear upward trend. Not sure what abundance is, loading?
-#   Looks like it is showing total loading by site arranged from lowest to highest
-#   but given the chart title (cumulative) I believe I am misreading both this, and the
-#   above chart.
-
-#Plot Richness vs Total Abundance
-#>> There is a weak and possibly insignificant downward trend.
-#   Plots along the line from high abundance/low richness to high:
-#   A34, E507B-S4, E503-S4, E807D
-#   Outliers include:
-#   Low plot richness and high abundance: S209
-#   Medium plot richness and low abundance: E100B-W
-
-#Drop rare species < 50% of sites (this removes any species that occur at 2 sites or less).
-co <- drop.var(coverOrig, min.po=50)
-
-#Check to see how many species were dropped for untransformed biomass data
-length(coverOrig[1,])#
-length(co[1,])#
-#46 to 19 variables (27 drops)
-
-str(co)#22 obs and 19 variables
-
-#Convert data.frame to a matrix (needed for uv.plots)
-co2 <- data.matrix(frame = co, rownames.force = NA)
-
-#uv.plots displays histogram, box and whisker, cumulative distribution and normal q-q plots
-#in one pane for each variable.
-uv.plots(co2)
-
-#What percent of values are zero, if it is over 50% you should consider changing the data
-#to presence/absence
-length(co2[co2 == 0])/(length(co2[1,])*length(co2[,1]))
-#19% zero values >>> do not do binary transformation
-
-#Look at correlation between species variables.
-chart.Correlation(co2, method = "pearson")
-
-#########################################################
 #6c: Summary stats for environmental data
 
 #Show how environmental variables are correlated.
-chart.Correlation(siteEnv3)
+chart.Correlation(siteEnv3[,-1])
 
 #Effect of column-standardization on untransformed data.
-siteEnv4 <- data.stand(siteEnv3, method = 'total', margin = 'column', plot = F)
+siteEnv4 <- data.stand(siteEnv3[,-1], method = 'total', margin = 'column', plot = F)
 
 #Split data by region
 seE <- siteEnv4[re == 1,]
@@ -495,21 +349,17 @@ abhmat <- biomassOrig#send newer file name to old file name
 #non-living categories present.
 
 #List of dominant species
-prim <- mapply(function(x) {colnames(abhmat)[order(abhmat[x,])][39]}, 1:length(abhmat[,1]))
-seco <- mapply(function(x) {colnames(abhmat)[order(abhmat[x,])][38]}, 1:length(abhmat[,1]))
+prim <- mapply(function(x) {colnames(abhmat)[order(abhmat[x,])][33]}, 1:length(abhmat[,1]))
+seco <- mapply(function(x) {colnames(abhmat)[order(abhmat[x,])][32]}, 1:length(abhmat[,1]))
 
-dTable <- data.frame(Sites = I(rownames(ab2mat)), Primary = I(prim), Secondary = I(seco))
+dTable <- data.frame(Sites = I(rownames(abhmat)), Primary = I(prim), Secondary = I(seco))
 
 udom <- unique(c(unique(dTable[,2]),unique(dTable[,3])))
-udomProper<- c("Ilex glabra", "Aristida stricta", "Lyonia ferruginea", "Serenoa repens", 
-               "Quercus spp. (fire impeders)", "Quercus minima", "Vaccinium corymbosum", 
-               "Rhizomatour grasses")
-
 
 hprim <- mapply(function(x) {length(dTable[,2][dTable[,2] == udom[x]])}, 1:length(udom))
 hseco <- mapply(function(x) {length(dTable[,3][dTable[,3] == udom[x]])}, 1:length(udom))
 
-hdom <- data.frame(Species = I(udomProper), Primary = hprim, Secondary = hseco)
+hdom <- data.frame(Species = I(udom), Primary = hprim, Secondary = hseco)
 h2dom <- hdom[order(hdom[,2], decreasing = T),]
 
 par(mai = c(2.5,1.2,1,1))
@@ -527,49 +377,11 @@ legend(20,6, c("Dominant", "Co-dominant"), fill = c("white", "dark grey"), bty =
 #7b: Arrange species on bar chart with highest to lowest average biomass, also
 #display average cover
 
-#Make a table showing mean/sd biomass and cover
+#Make a table showing mean/sd biomass
 bm <- apply(abhmat,2,mean)
 bs <- apply(abhmat,2,sd)
 
-cm <- apply(coverOrig,2,mean)
-cs <- apply(coverOrig,2,sd)
-
 biomass <- data.frame(Mean = round(bm,2), SD = round(bs,2))
-cover <- data.frame(cMean = round(cm,1), cSD = round(cs,1), bMean = rep(0, length(cs)), 
-                    bSD = rep(0,length(cs)))
-length(biomass[,1])
-cbind(rownames(biomass), match(rownames(biomass), rownames(cover)))
-length(cover[,1])
-cbind(rownames(cover), match(rownames(cover), rownames(biomass)))
-
-for(i in 1:length(cover[,1]))
-{
-  if(length(biomass[,1][rownames(biomass) %in% rownames(cover[i,])]) == 1)
-  {
-    cover[i,3] <- biomass[,1][rownames(biomass) %in% rownames(cover[i,])]  
-    cover[i,4] <- biomass[,2][rownames(biomass) %in% rownames(cover[i,])]  
-  } else
-  {
-    cover[i,3] <- NA
-    cover[i,4] <- NA
-  }
-}
-
-#Show table in decreasing order of species presence by biomass.
-cover <- cover[order(cover[,3], decreasing = T),]
-
-#Plot data
-par(mai = c(2.5,1.2,1,1))
-barplot(t(cbind(cover$bMean*10,cover$cMean)), main = "", 
-        xaxt = "n", ylab = "% cover/Mg/ha * 10", xlab = "", axes = F, beside = T, 
-        col = c("light green", "dark grey"))
-axis(2)
-text(matrix(c(seq(2,nrow(cover)*3,3), rep(-0.25,nrow(cover))), nrow = nrow(cover), 
-            ncol = 2, byrow = F), srt = 60, adj = 1, xpd = T, labels = paste(rownames(cover)), 
-     cex = 0.95)
-
-legend(50,6, c("Biomass*10", "Cover"), fill = c("light green", "dark grey"), bty = "n")
-
 
 ###################################################################################################
 ###################################################################################################
@@ -579,13 +391,12 @@ legend(50,6, c("Biomass*10", "Cover"), fill = c("light green", "dark grey"), bty
 
 #Don't want to do a standardization by row but here's the effects on data.
 
-
 ###################################################################################################
 ###################################################################################################
 #STEP #9: OUTLIERS
 
 #Find univariate outliers
-uv.outliers(bo2, id = names(bo2)[1]:names(bo2)[length(names(bo2))], sd.limit = 1)
+uv.outliers(biomassOrig, id = names(biomassOrig)[1]:names(biomassOrig)[length(names(biomassOrig))], sd.limit = 1)
 #did not figure out this function because this is not so important in multivariate space.
 #I don't think Euclidean distance is appropriate for biological data, should I be using
 #a different method? At any rate, 3 is the recommended sd.limit. None of your sites
@@ -624,7 +435,7 @@ x <- pcoaL2
 y <- bl2
 ##>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<##
 #Broken stick plot
-plot(x$eig/sum(pcoa1$eig)*100-bstick(21)*100,xlab = "PC", 
+plot(x$eig/sum(pcoaO1$eig)*100-bstick(21)*100,xlab = "PC", 
      ylab="Actual-random % variation explained")
 abline(h=0)
 
@@ -768,6 +579,40 @@ lb2matR1 <- lb2mat[-(row.names(lb2mat) == "E100B-E"),]
 ###################################################################################################
 #STEP #13: Direct gradient analysis with CAP
 
+#October 14, 2022
+#Based on tutorial here:
+#https://archetypalecology.wordpress.com/2018/02/21/distance-based-redundancy-analysis-db-rda-in-r/
+dbRDA_biomassOrig <- capscale(biomassOrig ~ Canopy + Litter + CoarseWD + FineWD + mfri_20yr + 
+                                StDevFRI_20YR + Season_20yr + RxFireMgmt, 
+                              siteEnv3, dist = "bray")
+plot(dbRDA_biomassOrig)
+anova(dbRDA_biomassOrig)
+anova(dbRDA_biomassOrig, by = 'axis', perm.max = 500)
+anova(dbRDA_biomassOrig, by = 'terms', perm.max = 200)
+scores_all <- scores(dbRDA_biomassOrig)
+scores_sites <- scores_all$sites
+scores_species <- scores_all$species
+scores_sites_environment <- cbind(scores_sites, siteEnv3[c(1:5,7:8,10)])
+correlations <- cor(scores_sites_environment)
+correlations2 <- correlations[3:10,1:2]
+correlations3 <- correlations2[c(2:4,8),1:2]
+
+#October 14, 2022
+#Based on tutorial here:
+#https://www.davidzeleny.net/anadat-r/doku.php/en:rda_cca_examples
+b.hell <- decostand(biomassOrig, 'hell')
+dbRDA <- rda(b.hell ~ mfri_20yr + Season_20yr + RxFireMgmt, siteEnv3)
+constrained_eig <- dbRDA$CCA$eig/dbRDA$tot.chi*100
+unconstrained_eig <- dbRDA$CA$eig/dbRDA$tot.chi*100
+expl_var <- c(constrained_eig, unconstrained_eig)
+barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
+         las = 2, ylab = '% variation')
+ordiplot(dbRDA)
+head(summary(dbRDA))
+
+
+
+
 
 #hist(emat$FireRotation, xlab = "Fire rotation (years)", main = "Distribution of fire rotation among sites", 
 #     ylim = c(0,8))
@@ -813,7 +658,7 @@ lb2matR1 <- lb2mat[-(row.names(lb2mat) == "E100B-E"),]
 y <- vector('numeric', length = 1000)
 for (i in 1:1000)
 {
-gcap1 <- capscale(bo2 ~ FireRotation + BurnFreeInterval + Season + RxFireMgmt, 
+gcap1 <- capscale(bo2 ~ FireRotation + Season + RxFireMgmt, 
                   data = siteEnv4, distance = "manhattan")
 
 gcap1s <- summary(gcap1)
@@ -837,7 +682,7 @@ y <- vector('numeric', length = 1000)
 for (i in 1:1000)
 {
   
-gcap2a <- capscale(bo2 ~ FireRotation + BurnFreeInterval + Season + RxFireMgmt, 
+gcap2a <- capscale(bo2 ~ FireRotation + Season + RxFireMgmt, 
                   data = siteEnv4, distance = "bray")
 
 gcap2as <- summary(gcap2a)
@@ -2059,15 +1904,7 @@ text(ev, genus, labels = row.names(ab2mat), cex = cf)
 
 
 
-
-
-
-
-
-
-
-
-
+dev.off()
 
 
 
