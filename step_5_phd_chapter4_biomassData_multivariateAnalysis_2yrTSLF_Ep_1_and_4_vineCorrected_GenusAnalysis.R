@@ -3,14 +3,6 @@
 #The purpose of this script is to explore the environmental data for the community ecology
 #multivariate analysis.
 
-#NOTE
-#This script was modified in October, 2022 and name was changed.
-#Script was maintained on GitHub (LongleafCommunityEcology repository) and previous 
-#modification occurred on 1-Jan-2020. Script name was changed from: 
-#sef_2014.09.25_Analysis_OriginalData_MeadowOutliersX_mod
-#to:
-#
-
 #Which computer are you using?
 #Forest Service>>>>>>> FS
 #Personal >>>>>>>>>>>> JC
@@ -62,82 +54,31 @@ rownames(siteEnv2) <- siteEnv[,1]
 
 #########################################################
 #2c: Environmental data, remove data you will not analyze
-siteEnv3 <- siteEnv2[,-c(11,12)]
+#siteEnv3 <- siteEnv2[,-c(11,12)]
 #Column 11 is soil drainage. This data is from USDA Soil Survey and not accurate
 #Column 12 is region. Only two regions, at this point I don't believe this adds 
 #substance to the analysis because there are no physical properties for each region
 #that can confound how fire characteristics drive understory plant composition
-#siteEnv3 <- siteEnv2[,-c(11)]
+siteEnv3 <- siteEnv2[,-c(11)]
 #maintain region column for restricted permutation tests
 
 ###################################################################################################
-#STEP 3: CREATE A BOUNDARY LAYER REGRESSION FUNCTION for Fire Rotation
-
 ###################################################################################################
-############################################FUNCTION###############################################
-
-#Create a function that will conduct a boundary layer regression with y variable as exponent,
-#print summary of regression, and plot data
-blr <- function(a,x,y,z)
-{
-  cf <- 0.8
-  mv <- vector(mode = "numeric")
-  fv <- vector(mode = "numeric")
-  le <- vector(mode = "numeric")
-  
-  fri <- 2:6
-  for(i in fri)
-  {
-    mv[i-1] <- max(y[x > i & x < i + 1])
-    fv[i-1] <- min(x[x > i & x < i + 1 & y == mv[i-1]])
-    le[i-1] <- length(y[x > i & x < i + 1])
-    
-    mv[i-1] <- mv[i-1] + 0.0001
-  }
-  
-  x2 <- fv
-  y2 <- mv  
-  
-  d <- data.frame(x2,y2)
-  logmodel <- lm(y2~a(x2),data=d)
-  
-  
-  ### fake vector
-  xvec <- seq(0,8, length=101)
-  logpred <- predict(logmodel, newdata=data.frame(x2=xvec))
-  
-  #Plot with boundary layer regression
-  plot(x, y, xlab = "Fire Rotation (years)", ylab = "biomass (Mg/ha)", main = z)
-  points(fv, mv, pch = 22)
-  lines(xvec,logpred)
-  text(4.1, (max(y) - max(y)/16), paste("Intercept", round(logmodel$coefficients[1],4)), cex = cf)
-  text(5.9, (max(y) - max(y)/16), paste("Slope", round(logmodel$coefficients[2],4)), cex = cf)
-  ms <- summary(logmodel)
-  text(4.1, (max(y) - max(y)/8), paste("r-squared", round(ms$r.squared,2)), cex = cf)
-  text(5.9, (max(y) - max(y)/8), paste("P-value", round(ms$coefficients[8],4)), cex = cf)
-  print(summary(logmodel))
-}
-
-###################################################################################################
-############################################FUNCTION###############################################
-
-###################################################################################################
-###################################################################################################
-#STEP #2: OPEN AND ADJUST BIOMASS DATA
+#STEP #3: OPEN AND ADJUST BIOMASS DATA
 
 #########################################################
-#2A: Open biomass data
+#3A: Open biomass data
 
 #Plot-level biomass data. This data has been modified so that vine species are consistent
 #across all sites.
 #Outlier sites have not been removed.
 plotBiomass <- read.table(paste("Understory_Vegetation_FlatFiles/stage_4_aggregate/outputs/", 
-                                "phd_chapter4_biomassPlotMatrix_2yr_Ep_1_4_Species_2022-10-17_15.34.40.csv",
+                                "phd_chapter4_biomassPlotMatrix_2yr_Ep_1_4_Genus_2022-10-19_13.26.07.csv",
                                 sep = ""), header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
                           stringsAsFactors = F)
 
 #########################################################
-#2C: calculate site means for untransformed plot-level data.
+#3C: calculate site means for untransformed plot-level data.
 #USED FOR DATA SCREENING ONLY - DATA NOT USED IN ANALYSIS.
 
 #Calculate untransformed site means from plot-level data 
@@ -152,28 +93,6 @@ siteBiomass2 <- as.data.frame.array(siteBiomass)
 #All biomass >> UNTRANSFORMED
 siteBiomass3 <- siteBiomass2[,2:(length(siteBiomass2[1,]))]
 rownames(siteBiomass3) <- siteBiomass2[,1]
-
-#########################################################
-#2d: Conduct log transformation on plot-level data and then calculate site means.
-
-#Conduct log-transformation on plot-level data
-#>>>>Justification for log-transformation?
-plotBiomassLogTrans <- data.trans(plotBiomass[,4:length(plotBiomass[1,])], method = 'log', 
-                                  plot = F)
-
-#Calculate site means from log-transformed plot-level data (USED IN ANALYSIS)
-siteBiomassLogTrans <- summarize(X = plotBiomassLogTrans, by = plotBiomass$siteName, colMeans, 
-                                 stat.name = colnames(plotBiomass)[4])
-colnames(siteBiomassLogTrans)[1] <- "siteName"
-
-
-#Convert object back into array format
-siteBiomassLogTrans2 <- as.data.frame.array(siteBiomassLogTrans)
-
-#Remove site names from matrix columns and assign as row names.
-#All biomass >> LOG-TRANSFORMED
-siteBiomassLogTrans3 <- siteBiomassLogTrans2[,2:(length(siteBiomassLogTrans2[1,]))]
-rownames(siteBiomassLogTrans3) <- siteBiomassLogTrans2[,1]
 
 ###################################################################################################
 ###################################################################################################
@@ -193,18 +112,22 @@ siteBiomass4 <- data.frame(so = ro2[,1], siteBiomass3)
 siteBiomass5 <- siteBiomass4[order(siteBiomass4$so),]
 siteBiomass6 <- siteBiomass5[,!colnames(siteBiomass5) %in% c("so")]
 
-#Log-tranformed biomass data
-siteBiomassLogTrans4 <- data.frame(so = ro2[,1], siteBiomassLogTrans3)
-siteBiomassLogTrans5 <- siteBiomassLogTrans4[order(siteBiomassLogTrans4$so),]
-siteBiomassLogTrans6 <- siteBiomassLogTrans5[,!colnames(siteBiomassLogTrans5) %in% c("so")]
-
 #Remove taxa with no occurences, this is necessary before you can use foa.plots below
-biomassOrig <- drop.var(siteBiomass5, min.fo = 1)
-biomassLog <- drop.var(siteBiomassLogTrans5, min.fo = 1)
+spp_drop <- drop.var(siteBiomass6, min.fo = 1)#biostats
+
 #Show taxa that were dropped:
-cbind(colnames(siteBiomass5), match(colnames(siteBiomass5), colnames(biomassOrig)))
+dropped <- match(colnames(siteBiomass6), colnames(spp_drop))
+cbind(colnames(siteBiomass6), dropped)
+length(dropped)
+length(dropped) - length(dropped[is.na(dropped) == T])
 #dropped seven genus. From 40 to 33.
-#dropped eight 'genus'species. From 50 to 42.
+
+#Drop columns not classified at the genus level
+cbind(1:length(spp_drop[1,]), colnames(spp_drop))
+gen <- spp_drop[,-c(12, 16, 28)]#forbs, grasses, and shrubs
+#there were no species or genus in here that were abundant at any given site
+#so I feel comfortable dropping them. I.e., they probably would have been dropped because they occur
+#at less than 10% of sites.
 
 ###################################################################################################
 ###################################################################################################
@@ -214,102 +137,54 @@ cbind(colnames(siteBiomass5), match(colnames(siteBiomass5), colnames(biomassOrig
 #6a: Summary stats for biomass data
 
 #Summary stats
-round(stat.desc(biomassOrig),2)
+round(stat.desc(gen),2)
 
 #Look at how data is distributed
-foa.plots(biomassOrig)
+foa.plots(gen)
 
-#Cum. Number of Species (aka Genus) vs Frequency of Occurrence
-#>> There are 33 genus of plants. Half (17) of those occur on 14 of the sites
-#   The other half are uncommon and occur at less than 7 (total n = 21) sites.
+#Drop rare genus < 10% of sites.
+gco <- drop.var(gen, min.po=10)
 
-#Cum. Number of Species vs Percent Occurrence
-#Not sure what "percent occurrence" (y-axis) means. How is this different than the prior chart?
-#>> Similar trend as above
-#   21 genus occur less than 50%
-#   12 genus have occurence greater than 70, with all but one higher than 90%
+#Check to see how many genus were dropped for untransformed biomass data
+length(genus[1,])#
+length(gco[1,])#
+#30 to 19 variables (11 drops) for genus-level data
 
-#Histogram of Species Occurrence
-#>> Bimodal with largest peak in the 0-5 sites range and a smaller, trough in the 10-15 
-#   sites range and secondary peak in the 20-25 sites range.
-
-#Histogram of Log(Species Occurrence)
-#>> Not sure what this histogram is displaying but distrubution is more or less flat.
-
-#Cumulative Distribution of Species Mean Abundance
-#>> Exponentially increasing
-# This shows that about 5 genus are dominant (genus on steep curve)
-# and the remaining 28 genus have low biomass.
-
-#Species Occurrence vs Mean Abundance
-#Genus with highest abundance have higher occurrence, but there are also many genus with high occurrence
-#and low abundance.
-
-#Species Occurrence vs Log(Mean Abunandance)
-#>> There is a weak (probably significant) upward trend of increasing abundance with frequency
-#   of occurrence.
-
-#Cumulative Distribution of Plot (Site) Richness.
-#>> Site richness doubles from 12 to 21 and increases on a steady slope across all sites. I.e., there are no
-#distinct groups of low and high richness plots, but rather a gradual transition from low to high.
-
-#Cumulative Distribution of Plot Total Abundance
-#>> There is a linear upward trend. Not sure what abundance is, loading?
-#   Looks like it is showing total loading by site arranged from lowest to highest
-#   but given the chart title (cumulative) I believe I am misreading both this, and the
-#   above chart.
-
-#Plot Richness vs Total Abundance
-#>> There is a weak and possibly insignificant upward trend.
-#   Plots along the line from low abundance/low richness to high:
-#   A32, E508A, E505, E807D, E807B, E100B-E
-#   Outliers include:
-#   Low plot richness and high abundance: S209
-#   Medium plot richness and low abundance: E100B-W
-
-#Drop rare species < 50% of sites.
-spo <- drop.var(biomassOrig, min.po=5)
-spl <- drop.var(biomassLog, min.po=5)
-
-#Check to see how many species were dropped for untransformed biomass data
-length(biomassOrig[1,])#
-length(spo[1,])#
-length(biomassLog[1,])#
-length(spl[1,])
-#42 to 13 variables (29 drops) for species-level data
-
-str(spo)#22 obs and 13 variables
-str(spl)#22 obs and 13 variables
+str(gco)#21 obs and 19 variables
 
 #Convert data.frame to a matrix (needed for uv.plots)
-so2 <- data.matrix(frame = spo, rownames.force = NA)
-sl2 <- data.matrix(frame = spl, rownames.force = NA)
+gco.df <- data.matrix(frame = gco, rownames.force = NA)
 
 #uv.plots displays histogram, box and whisker, cumulative distribution and normal q-q plots
 #in one pane for each variable.
-uv.plots(so2)#Many species are right skewed with a long right tail. To reduce the effect of these outliers use log-transformed data.
-uv.plots(sl2)#Distributions are not skewed when log transformation is applied. Use this data for PCA.
+uv.plots(gco.df)#Many genus are right skewed with a long right tail. 
 
 #What percent of values are zero, if it is over 50% you should consider changing the data
 #to presence/absence
-length(sl2[sl2 == 0])/(length(sl2[1,])*length(sl2[,1]))
-#6% zero values >>> no need to convert data to presence/absence
+length(gco[gco == 0])/(length(gco[1,])*length(gco[,1]))
+#40% zero values >>> no need to convert data to presence/absence
 
-#Look at correlation between species variables.
+#Look at correlation between genus variables.
 #generate table (you need to run correlation_matrix() function for this to work:
 #https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
-scm <- correlation_matrix(as.data.frame(so2), type = "pearson", show_significance = T, 
+scm <- correlation_matrix(as.data.frame(gco), type = "pearson", show_significance = T, 
                          digits = 2, use = "lower", replace_diagonal = T)
-chart.Correlation(so2, method = "pearson")#performanceAlanlytics
+chart.Correlation(gco, method = "pearson")#performanceAlanlytics
 #there is only one correlation significant at the P < 0.05 level
 #St. Andrews Cross and Darrow's blueberry
+
+setwd("C:/Users/james/Box/01. james.cronan Workspace/Research/UW_PHD/Dissertation/4_Chapter_4/Data/Understory_Vegetation_FlatFiles/stage_6_analysis/genus_level_outputs")
+#Save the plot-level biomass data.
+write.table(scm, file = "genus_level_correlation_matrix.csv", append = F, quote = T, 
+            sep = ",", eol = "\n", na = "NA", dec = ".", row.names = F, col.names = T, 
+            qmethod = c("escape", "double"))#
 
 #########################################################
 #6c: Summary stats for environmental data
 
 #Show how environmental variables are correlated.
 chart.Correlation(siteEnv3)
-ecm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_significance = T, 
+scm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_significance = T, 
                           digits = 2, use = "lower", replace_diagonal = T)
 
 ###################################################################################################
@@ -317,22 +192,23 @@ ecm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_signif
 #STEP #7: PRELIMINARY ANALYSIS
 
 #########################################################
-#7a: Determine species with the highest and second highest biomass at each site
-#and then display occurrence of dominant and co-dominant species with a histogram.
+#7a: Determine genus with the highest and second highest biomass at each site
+#and then display occurrence of dominant and co-dominant genus with a histogram.
 
-#Create a histogram of primary and secondary dominance across sites by species.
+#Create a histogram of primary and secondary dominance across sites by genus.
 
-#Remove non-living categories (dead woody) from the biomass data
-last_col <- length(biomassOrig[1,])
-nextLast_col <- length(biomassOrig[1,]) - 1
+#Identify last and second to last columns to calculate which species had the highest and
+#second highest biomass values at each site
+last_col <- length(gco[1,])
+nextLast_col <- length(gco[1,]) - 1
 
 #List of dominant species
-prim <- mapply(function(x) {colnames(biomassOrig)[order(biomassOrig[x,])][last_col]}, 
-               1:length(biomassOrig[,1]))
-seco <- mapply(function(x) {colnames(biomassOrig)[order(biomassOrig[x,])][nextLast_col]}, 
-               1:length(biomassOrig[,1]))
+prim <- mapply(function(x) {colnames(gco)[order(gco[x,])][last_col]}, 
+               1:length(gco[,1]))
+seco <- mapply(function(x) {colnames(gco)[order(gco[x,])][nextLast_col]}, 
+               1:length(gco[,1]))
 
-dTable <- data.frame(Sites = I(rownames(biomassOrig)), Primary = I(prim), Secondary = I(seco))
+dTable <- data.frame(Sites = I(rownames(gco)), Primary = I(prim), Secondary = I(seco))
 
 udom <- unique(c(unique(dTable[,2]),unique(dTable[,3])))
 
@@ -353,15 +229,6 @@ text(matrix(c(seq(2,nrow(h2dom)*3,3), rep(-0.25,nrow(h2dom))), nrow = nrow(h2dom
 
 legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "dark grey"), bty = "n")
 
-#########################################################
-#7b: Arrange species on bar chart with highest to lowest average biomass
-
-#Make a table showing mean/sd biomass
-bm <- apply(biomassOrig,2,mean)
-bs <- apply(biomassOrig,2,sd)
-
-biomass <- data.frame(Mean = round(bm,2), SD = round(bs,2))
-
 ###################################################################################################
 ###################################################################################################
 #STEP #8: Gradient length diagnostics with DCA for untransformed biomass data, log-transformed
@@ -369,7 +236,7 @@ biomass <- data.frame(Mean = round(bm,2), SD = round(bs,2))
 
 #Create a bindary dataset for species presence absence
 #Biomass - untransformed
-speocc <- data.trans(so2, method = "power", exp = 0, plot = F)
+speocc <- data.trans(gco, method = "power", exp = 0, plot = F)
 
 decorana(speocc, ira = 0)
 
@@ -378,12 +245,11 @@ speocc <- data.trans(sl2, method = "power", exp = 0, plot = F)
 
 decorana(speocc, ira = 0)
 
-#DCA 1 axis length is 0.59714
-#This is way below the 3-4 cut-off proposed by ter Braak and Smilauer (2002) used as a threshold 
+#The 3-4 cut-off proposed by ter Braak and Smilauer (2002) used as a threshold 
 #for selecting a multivariate analysis technique (< 3 PCA/RDA; data are suited for linear method, and
 #> 4 CA/CCA; data are suited for unimodal methods).
 
-#This value indicates a short gradient length (i.e., use linear analysis). This is consistent 
+#Values less than 3-4 indicate a short gradient length (i.e., use linear analysis). This is consistent 
 #with sites selection which focused on a narrow set of environmental conditions. 
 #I.e. mesic flatwoods with a history of management with frequent rx fire and no other evidence of 
 #major disturbance.
@@ -391,15 +257,37 @@ decorana(speocc, ira = 0)
 ###################################################################################################
 ###################################################################################################
 #STEP #9: PCA of the covariance matrix
-pca <- rda(decostand(sl2, method = "hellinger", scale = T))#scale = T should be PCA of the correlation matrix
+pca <- rda(decostand(gco, method = "hellinger"), scale = F)#scale = T should be PCA of the correlation matrix
+#transformation with decostand() -- use hellinger transformation
+#arg: scale = T - this standardizes the data and gives it unit variance (i.e., all variables have a variance = 1)
+#the rda() function automatically centers the data around the mean for each variable.
+
+scores(pca, choices = 1:3, display = "sites", scaling = "sites", correlation = T)
+scores(pca, choices = 1:3, display = "species", scaling = "species", correlation = F)
+
 pca
 #Plot pca
-biplot(pca, scaling = 1)
+biplot(pca, scaling = "sites")
+biplot(pca, scaling = "symmetric")
+biplot(pca, scaling = "species")
+biplot(pca, scaling = "none")
+
 #Use brokan stick method to determine how many PCA axes to retain
 screeplot(pca, bstick = T, type = "l", main = NULL)
 #Extract eigenvalues
 eigenvals(pca)
 summary(eigenvals(pca))
+
+#Plot data with different symbols for each site location
+sitetype <- as.numeric (as.factor (siteEnv3$Region))
+ordiplot (pca, display = 'sites', type = 'n')
+points (pca, pch = sitetype, col = sitetype)
+
+#Determine which genus are most correlated with PC axes.
+loadings <- scores(pca, display = "species", scaling = 0)
+sort(abs(loadings[,1]), decreasing = T)
+sort(abs(loadings[,2]), decreasing = T)
+
 
 #Fitting environmental data
 set.seed(42)#use this to make this permutation analysis reproducibe, otherwise it will be different
