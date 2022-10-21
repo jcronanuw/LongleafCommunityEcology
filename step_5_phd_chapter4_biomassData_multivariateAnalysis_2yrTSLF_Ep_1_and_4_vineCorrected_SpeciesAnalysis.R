@@ -160,24 +160,27 @@ rownames(siteBiomass3) <- siteBiomass2[,1]
 #hand off object name.
 spo <- siteBiomass3
 
-#Convert data.frame to a matrix (needed for uv.plots)
-so2 <- data.matrix(frame = spo, rownames.force = NA)
+#Show summary stats
+sss <- round(stat.desc(spo),2)
+sort(sss['mean',], decreasing = T)
+sss['SE.mean','QUMI2']
+sss['mean','QUMI2']-sss['SE.mean','QUMI2']
 
 #uv.plots displays histogram, box and whisker, cumulative distribution and normal q-q plots
 #in one pane for each variable.
-uv.plots(so2)#Many species are right skewed with a long right tail. To reduce the effect of these outliers use log-transformed data.
+uv.plots(spo)#Many species are right skewed with a long right tail. To reduce the effect of these outliers use log-transformed data.
 
 #What percent of values are zero, if it is over 50% you should consider changing the data
 #to presence/absence
-length(so2[so2 == 0])/(length(so2[1,])*length(so2[,1]))
+length(spo[spo == 0])/(length(spo[1,])*length(spo[,1]))
 #64% zero values
 
 #Look at correlation between species variables.
 #generate table (you need to run correlation_matrix() function for this to work:
 #https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
-scm <- correlation_matrix(as.data.frame(so2), type = "pearson", show_significance = T, 
+scm <- correlation_matrix(as.data.frame(spo), type = "pearson", show_significance = T, 
                          digits = 2, use = "lower", replace_diagonal = T)
-chart.Correlation(so2, method = "pearson")#performanceAlanlytics
+chart.Correlation(spo, method = "pearson")#performanceAlanlytics
 
 #########################################################
 #6c: Summary stats for environmental data

@@ -78,7 +78,7 @@ siteEnv3 <- siteEnv2[,-c(11)]
 #across all sites.
 #Outlier sites have not been removed.
 plotBiomass <- read.table(paste("Understory_Vegetation_FlatFiles/stage_4_aggregate/outputs/", 
-                                "phd_chapter4_biomassPlotMatrix_2yr_Ep_1_4_Genus_2022-10-19_13.26.07.csv",
+                                "phd_chapter4_biomassPlotMatrix_2yr_Ep_1_4_FuncGroup_2022-10-20_14.35.08.csv",
                                 sep = ""), header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
                           stringsAsFactors = F)
 
@@ -117,21 +117,14 @@ siteBiomass5 <- siteBiomass4[order(siteBiomass4$so),]
 siteBiomass6 <- siteBiomass5[,!colnames(siteBiomass5) %in% c("so")]
 
 #Remove taxa with no occurences, this is necessary before you can use foa.plots below
-spp_drop <- drop.var(siteBiomass6, min.fo = 1)#biostats
+fugr <- drop.var(siteBiomass6, min.fo = 1)#biostats
 
 #Show taxa that were dropped:
-dropped <- match(colnames(siteBiomass6), colnames(spp_drop))
+dropped <- match(colnames(siteBiomass6), colnames(fugr))
 cbind(colnames(siteBiomass6), dropped)
 length(dropped)
 length(dropped) - length(dropped[is.na(dropped) == T])
-#dropped seven genus. From 40 to 33.
-
-#Drop columns not classified at the genus level
-cbind(1:length(spp_drop[1,]), colnames(spp_drop))
-gen <- spp_drop[,-c(12, 16, 28)]#forbs, grasses, and shrubs
-#there were no species or genus in here that were abundant at any given site
-#so I feel comfortable dropping them. I.e., they probably would have been dropped because they occur
-#at less than 10% of sites.
+#No drops.
 
 ###################################################################################################
 ###################################################################################################
@@ -141,61 +134,52 @@ gen <- spp_drop[,-c(12, 16, 28)]#forbs, grasses, and shrubs
 #5a: Summary stats for biomass data
 
 #Summary stats
-round(stat.desc(gen),2)
+round(stat.desc(fugr),2)
 
 #Look at how data is distributed
-foa.plots(gen)
+foa.plots(fugr)
 
 #Drop rare genus < 10% of sites.
-gco <- drop.var(gen, min.po=10)
+fco <- drop.var(fugr, min.po=10)
 
 #Check to see how many genus were dropped for untransformed biomass data
-length(gen[1,])#
-length(gco[1,])#
-#30 to 19 variables (11 drops) for genus-level data
+length(fugr[1,])#
+length(fco[1,])#
+#No drops
 
-str(gco)#21 obs and 19 variables
+str(fco)
+#21 obs and 7 variables
 
 #uv.plots displays histogram, box and whisker, cumulative distribution and normal q-q plots
 #in one pane for each variable.
-uv.plots(gco)#Many genus are right skewed with a long right tail. 
+uv.plots(fco)#About half of functional groups  are right skewed with a long right tail. 
 #Conduct a log tranformation
 
 #What percent of values are zero, if it is over 50% you should consider changing the data
 #to presence/absence
-length(gco[gco == 0])/(length(gco[1,])*length(gco[,1]))
-#~40% zero values >>> no need to convert data to presence/absence
+length(fco[fco == 0])/(length(fco[1,])*length(fco[,1]))
+#~8% zero values >>> no need to convert data to presence/absence
 
 #Look at correlation between genus variables.
 #generate table (you need to run correlation_matrix() function for this to work:
 #https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
-scm <- correlation_matrix(as.data.frame(gco), type = "pearson", show_significance = T, 
+scm <- correlation_matrix(as.data.frame(fco), type = "pearson", show_significance = T, 
                          digits = 2, use = "lower", replace_diagonal = T)
-chart.Correlation(gco, method = "pearson")#performanceAlanlytics
+chart.Correlation(fco, method = "pearson")#performanceAlanlytics
+#Understory trees and vines are highly correlated (0.65). All other are below 0.55.
 
 #log transform genera data.
-gco_log <- decostand(gco, method = "log")
+fco_log <- decostand(fco, method = "log")
 
 #Check distributions
-uv.plots(gco_log)
-#Improved for several species, but not these:
-#Aronia
-#Cyrilla
-#Gelsemium
-#Kalmia
-#Licania
-#Lyonia
-#Magnolia
-#Morella
-#Rubus
-#Vitis
+uv.plots(fco_log)
+#Improved for all.
 
 #Hellinger transformation on genera data
-gco_hel <- decostand(gco, method = "hellinger")
+fco_hel <- decostand(fco, method = "hellinger")
 #Check distributions
-uv.plots(gco_hel)
-#Improvement over log transformation but skew is still to the right
-#for all of the genera listed in the log transformation.
+uv.plots(fco_hel)
+#Improvement over log transformation distributions, they are more 'normal'.
 
 #########################################################
 #6c: Summary stats for environmental data
@@ -264,32 +248,31 @@ uv.plots(env)#looks good
 #Environmental data
 mv.outliers(env[1:8], method = "euclidean", sd.limit =2)#S330
 
-
 #biomass
-mv.outliers(gco_hel, method = "bray", sd.limit =2)#S330 & E103BB_S3 for gco_hel and S330 for gco_log
+mv.outliers(fco_log, method = "bray", sd.limit =2)#S330
 
 ###################################################################################################
 ###################################################################################################
 #STEP #6: PRELIMINARY ANALYSIS
 
 #########################################################
-#7a: Determine genus with the highest and second highest biomass at each site
-#and then display occurrence of dominant and co-dominant genus with a histogram.
+#7a: Determine plant functional groups with the highest and second highest biomass at each site
+#and then display occurrence of dominant and co-dominant plant functional groups with a histogram.
 
-#Create a histogram of primary and secondary dominance across sites by genus.
+#Create a histogram of primary and secondary dominance across sites by plant functional groups.
 
-#Identify last and second to last columns to calculate which species had the highest and
+#Identify last and second to last columns to calculate which plant functional groups had the highest and
 #second highest biomass values at each site
-last_col <- length(gco[1,])
-nextLast_col <- length(gco[1,]) - 1
+last_col <- length(fco[1,])
+nextLast_col <- length(fco[1,]) - 1
 
-#List of dominant species
-prim <- mapply(function(x) {colnames(gco)[order(gco[x,])][last_col]}, 
-               1:length(gco[,1]))
-seco <- mapply(function(x) {colnames(gco)[order(gco[x,])][nextLast_col]}, 
-               1:length(gco[,1]))
+#List of dominant plant functonal group
+prim <- mapply(function(x) {colnames(fco)[order(fco[x,])][last_col]}, 
+               1:length(fco[,1]))
+seco <- mapply(function(x) {colnames(fco)[order(fco[x,])][nextLast_col]}, 
+               1:length(fco[,1]))
 
-dTable <- data.frame(Sites = I(rownames(gco)), Primary = I(prim), Secondary = I(seco))
+dTable <- data.frame(Sites = I(rownames(fco)), Primary = I(prim), Secondary = I(seco))
 
 udom <- unique(c(unique(dTable[,2]),unique(dTable[,3])))
 
@@ -318,7 +301,7 @@ legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "
 #Create a bindary dataset for species presence absence
 #Biomass - log-transformed
 #Note: output is the same whether you use untransformed or transformed data.
-speocc <- data.trans(gco_log, method = "power", exp = 0, plot = F)
+speocc <- data.trans(fco_log, method = "power", exp = 0, plot = F)
 
 decorana(speocc, ira = 0)
 
@@ -389,7 +372,7 @@ summary(surf)
 #STEP #9: RDA of the covariance matrix
 
 #Which transformation do you want to pass to the rda()
-spp <- gco_log
+spp <- fco_log
 
 #Generate full RDA model
 gen_rda_upr <- rda(spp ~ ., data = env)
@@ -424,14 +407,12 @@ gen_rda_2$anova
 anova(gen_rda_2, by = "terms")
 
 #Test starting model, but with region is a conditional block
-c1 <- rda(gco_hel ~ fineWD + coarseWD + mfri + Condition(region), data = env)
+c1 <- rda(fco_hel ~ fineWD + coarseWD + mfri + Condition(region), data = env)
 h <- how(within = Within(type = "free"), plots = Plots(strata = env$region))
 set.seed(42)
 tt <- anova(c1, permutations = h, model = "reduced")
 tt
 summary(tt)
-summary(c1)
-c1$anova
 
 
 
