@@ -38,16 +38,6 @@ dev.off()
 
 ###################################################################################################
 ###################################################################################################
-#
-#
-#                                      PLANT FUNCTIONAL GROUPS
-#
-#
-###################################################################################################
-###################################################################################################
-
-###################################################################################################
-###################################################################################################
 #STEP #2: OPEN, ADJUST, AND REVIEW DATA FILES
 
 ###################################################################################################
@@ -147,7 +137,7 @@ write.table(biomassFuncGroup, file = paste("phd_chapter4_biomassPlotMatrix_2yr_E
 #STEP #5a: Biomass data
 
 #Create a vector of unique genus
-bpge <- sort(unique(biomassCross$genus))
+bpge <- sort(unique(biomassCross$gen_abbr))
 
 #Create a data.frame to accept the functional group values.
 bge <- data.frame(matrix(rep(0,length(plotBiomass[,1]) * length(bpge)), 
@@ -158,7 +148,7 @@ bge <- data.frame(matrix(rep(0,length(plotBiomass[,1]) * length(bpge)),
 for(i in 1:length(bpge))
 {
   bge[,i] <- apply(plotBiomass[colnames(plotBiomass) %in% 
-                                 biomassCross$original_name[biomassCross$genus == bpge[i]]],1,sum)
+                                 biomassCross$original_name[biomassCross$gen_abbr == bpge[i]]],1,sum)
 }
 
 

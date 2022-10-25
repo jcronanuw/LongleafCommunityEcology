@@ -1,6 +1,6 @@
 ###################################################################################################
 ############################-----start-----########################################################
-#                                        GENERA-LEVEL ANALYSIS
+#                             ANALYSIS -- PLANT FUNCTIONAL GROUPS
 #The purpose of this script is to conduct a constrained ordination of genera-level understory
 #composition data using fire regime characteristics and forest structure (overstory and forest
 #floor) using constraints.
@@ -78,7 +78,7 @@ siteEnv3 <- siteEnv2[,-c(11)]
 #across all sites.
 #Outlier sites have not been removed.
 plotBiomass <- read.table(paste("Understory_Vegetation_FlatFiles/stage_4_aggregate/outputs/", 
-                                "phd_chapter4_biomassPlotMatrix_2yr_Ep_1_4_FuncGroup_2022-10-20_14.35.08.csv",
+                                "phd_chapter4_biomassPlotMatrix_2yr_Ep_1_4_FuncGroup_2022-10-24_16.00.38.csv",
                                 sep = ""), header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE,
                           stringsAsFactors = F)
 
@@ -134,7 +134,8 @@ length(dropped) - length(dropped[is.na(dropped) == T])
 #5a: Summary stats for biomass data
 
 #Summary stats
-round(stat.desc(fugr),2)
+pfg_ss <- round(stat.desc(fugr),2)
+#sort(pfg_ss[9,], decreasing = T)
 
 #Look at how data is distributed
 foa.plots(fugr)
@@ -207,6 +208,9 @@ scm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_signif
 siteEnv4 <- siteEnv3[,-c(6,9)]#dropping the 10-yr values for mean fire return
 #interval and ratio of growing:dormant season burns.
 
+#Create a new vector with two regions (east and west) instead of 3 (SMNWR, APNF, and EAFB).
+region <- as.factor(ifelse(siteEnv3$Region == 3, 2, siteEnv3$Region))
+
 #Check distributions of environmental data
 #Remove categories
 check_env <- siteEnv4[,-c(9,10)]
@@ -219,16 +223,18 @@ uv.plots(check_env)
 cdwd_log <- decostand(siteEnv4$CoarseWD, method = "log")
 stde_log <- decostand(siteEnv4$StDevFRI_20YR, method = "log")
 
+#Combine fine DWD with litter.
+ff <- siteEnv4$Litter + siteEnv4$FineWD
+
 #Create new environmental variables data frame
 env <- data.frame(canopy = siteEnv4$Canopy,
-                     litter = siteEnv4$Litter,
+                     ff = ff,
                      coarseWD = cdwd_log,
-                     fineWD = siteEnv4$FineWD,
                      mfri = siteEnv4$mfri_20yr,
                      sd_fri = stde_log,
                      gd_ratio = siteEnv4$Season_20yr,
                      rxfire = siteEnv4$RxFireMgmt,
-                     region = as.factor(siteEnv4$Region))
+                     region = as.factor(region))
 rownames(env) <- rownames(siteEnv4)
 
 
@@ -246,10 +252,17 @@ uv.plots(env)#looks good
 #That number is a bit arbitrary. If it was 2.5 you wouldn't have any outliers
 
 #Environmental data
-mv.outliers(env[1:8], method = "euclidean", sd.limit =2)#S330
+mv.outliers(env[1:7], method = "euclidean", sd.limit =2.0)
 
 #biomass
-mv.outliers(fco_log, method = "bray", sd.limit =2)#S330
+mv.outliers(fco, method = "bray", sd.limit =2.0)
+
+#Drop S330 because it is an outier within the environmental dataset. This will also create a balanced
+#sample design for regional blocks and allow me to randomize within regions for the RDA with region
+#as a conditional term.
+env <- env[rownames(env) != "S330",]
+fco_log <- fco_log[rownames(fco_log) != "S330",]
+fco <- fco[rownames(fco) != "S330",]
 
 ###################################################################################################
 ###################################################################################################
@@ -293,6 +306,37 @@ text(matrix(c(seq(2,nrow(h2dom)*3,3), rep(-0.25,nrow(h2dom))), nrow = nrow(h2dom
 
 legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "dark grey"), bty = "n")
 
+
+#Summary stats
+fss <- round(stat.desc(fco),2)
+fss
+fco
+herb_mat <- cbind(fco$graminoids, fco$forb)
+wood_mat <- cbind(fco$shrub, fco$subshrub, fco$understory, fco$vine)
+herb_load <- apply(herb_mat, 1, sum)
+wood_load <- apply(wood_mat, 1, sum)
+load_mat <- cbind(herb_load, wood_load)
+rownames(load_mat) <- rownames(fco)
+colnames(load_mat) <- c("herb", "woody")
+load_total <- apply(load_mat, 1, sum)
+herb_perc <- round((herb_load/load_total)*100,1)
+median(herb_perc)
+plot(sort(herb_perc), decreasing = T)
+
+#Mean percent herb loading
+mean(herb_perc)
+
+#Range for percent herb loading
+range(herb_perc)
+
+#Mean and range of live understory loading
+round(mean(load_total),2)
+round(range(load_total),2)
+
+#Shrub loading
+round(stat.desc(wood_load),2)
+
+
 ###################################################################################################
 ###################################################################################################
 #STEP #7: Gradient length diagnostics with DCA for untransformed biomass data, log-transformed
@@ -317,20 +361,71 @@ decorana(speocc, ira = 0)
 ###################################################################################################
 ###################################################################################################
 #STEP #8: PCA of the covariance matrix
-pca <- rda(decostand(gco, method = "hellinger"), scale = F)#scale = T should be PCA of the correlation matrix
+pca <- rda(decostand(fco_log, method = "hellinger"), scale = T)#scale = T should be PCA of the correlation matrix
 #transformation with decostand() -- use hellinger transformation
 #arg: scale = T - this standardizes the data and gives it unit variance (i.e., all variables have a variance = 1)
 #the rda() function automatically centers the data around the mean for each variable.
 
-scores(pca, choices = 1:3, display = "sites", scaling = "sites", correlation = T)
-scores(pca, choices = 1:3, display = "species", scaling = "species", correlation = F)
-
+#Provide info on PCA
 pca
+summary(pca)
+
+#Biplot for PCA show labels on sites.
+biplot(pca)
+
+#Create a simplified biplot showing sites as dots grouped by region.
+
+#Set up biplot with species loadings
+par(cex = 1.75, cex.lab = 0.7, cex.axis = 0.7)
+scl <- 2
+biplot(pca, type=c("text", "none"), col=c("black", "black"), xlab="", 
+       ylab="", scaling = scl)
+
+#Add variance explained to each axis.
+title(xlab = paste ("PC1 (",
+                   round((eigenvals(pca)[1]/sum(eigenvals(pca)))*100,0), 
+                   " percent)", sep = ""), 
+      ylab = paste("PC2 (",
+                   round((eigenvals(pca)[2]/sum(eigenvals(pca)))*100,0), 
+                   " percent)", sep = ""), 
+      mgp=c(2.2, 2.2, 0))
+
+#Add sites to biplot categorized by region.
+par(cex = 2)
+
+points.sites <- ifelse(region == 1, 16, 1)
+color <- ifelse(region == 1,"black", "black")
+points(pca, pch = points.sites, col = color, cex = 0.75)
+
+par(cex = 1.5)
+
+legend("topright", legend = c("Eglin AFB", "Appalachicola NF/St. Marks NWR"), bty = "n", 
+       col = c("black", "black"), pch = c(16,1), pt.bg = c(16,1), cex = 1)
+
+
+#Show percent of variation explained by first four PC axes.
+round((eigenvals(pca)[1]/sum(eigenvals(pca)))*100,1)
+round((eigenvals(pca)[2]/sum(eigenvals(pca)))*100,1)
+round((eigenvals(pca)[3]/sum(eigenvals(pca)))*100,1)
+round((eigenvals(pca)[4]/sum(eigenvals(pca)))*100,1)
+
+#PCA scores
+#scores(pca, choices = 1:3, display = "sites", scaling = "sites", correlation = T)
+loadings <- scores(pca, choices = 1:4, display = "species", scaling = "species", correlation = T)
+sort(abs(loadings[,1]), decreasing = T)
+sort(abs(loadings[,2]), decreasing = T)
+sort(abs(loadings[,3]), decreasing = T)
+
+#Show biplot for axis 1 and 3 so you can see how bunchgrass is arranged relative to the first axis.
+dev.off()
+ordiplot (pca, choices = c(1,3), type = "text")
+ordiplot (pca, choices = c(2,3), type = "text")
+
 #Plot pca
-biplot(pca, scaling = "sites")
-biplot(pca, scaling = "symmetric")
-biplot(pca, scaling = "species")
-biplot(pca, scaling = "none")
+#biplot(pca, scaling = "sites")
+#biplot(pca, scaling = "symmetric")
+#biplot(pca, scaling = "species")
+#biplot(pca, scaling = "none")
 
 #Use brokan stick method to determine how many PCA axes to retain
 screeplot(pca, bstick = T, type = "l", main = NULL)
@@ -338,33 +433,23 @@ screeplot(pca, bstick = T, type = "l", main = NULL)
 eigenvals(pca)
 summary(eigenvals(pca))
 
-#Plot data with different symbols for each site location
-sitetype <- as.numeric (as.factor (siteEnv3$Region))
-ordiplot (pca, display = 'sites', type = 'n')
-points (pca, pch = sitetype, col = sitetype)
-
-#Determine which genus are most correlated with PC axes.
-loadings <- scores(pca, display = "species", scaling = 0)
-sort(abs(loadings[,1]), decreasing = T)
-sort(abs(loadings[,2]), decreasing = T)
-
-
 #Fitting environmental data
-set.seed(42)#use this to make this permutation analysis reproducibe, otherwise it will be different
+#set.seed(42)#use this to make this permutation analysis reproducibe, otherwise it will be different
 #every time, especially when number of permutations is low.
-ev <- envfit(pca ~ ., data = siteEnv3, choices = 1:2, scaling = 'symmetric', permutations = 1000)
+#ev <- envfit(pca ~ ., data = siteEnv3, choices = 1:2, scaling = 'symmetric', permutations = 1000)
 #options for scaling: "species", "sites", "symmetric" (scales both for species and sites), "none" (raw scores).
 #cca() hill = T, rda(): correlation = T (standardizes scores among species).
-ev
+#ev
 
 plot(pca, display = "sites", type = "n", scaling = "symmetric")
 points(pca, display = "sites", scaling = "symmetric")
 plot(ev, add = T)
 
-surf <- ordisurf(pca ~ FineWD, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
+par(cex = 0.5)
+surf <- ordisurf(pca ~ canopy, data = env, knots = 1, isotropic = T, main = NULL)
 surf <- ordisurf(pca ~ CoarseWD, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
 surf <- ordisurf(pca ~ Litter, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
-surf <- ordisurf(pca ~ mfri_20yr, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
+surf <- ordisurf(pca ~ mfri_20yr, data = siteEnv3, knots = 5, isotropic = T, main = NULL)
 summary(surf)
 
 ###################################################################################################
@@ -375,451 +460,215 @@ summary(surf)
 spp <- fco_log
 
 #Generate full RDA model
-gen_rda_upr <- rda(spp ~ ., data = env)
-gen_rda_upr
-ps_upr <- permustats(anova(gen_rda_upr))#anova is testing the entire model for significance.
-summary(ps_upr)
-densityplot(ps_upr)
-
-set.seed(45)#use this so results are reproducible
-pstat_1 <- permustats(anova(gen_rda_upr))#anova is testing the entire model for significance.
-summary(pstat_1)
-densityplot(pstat_1)
-#((1 - Pr(perm) value) *100)% of the permuted F values were lower than the observed F statistic
-#this is good if higher than 95%, we want the Observed F to be in the extreme upper tail, i.e., we want it to be big.
 set.seed(1)
-anova(gen_rda_upr, by = "terms")#check out upr model
+pfg_rda_upr <- rda(spp ~ canopy + ff + coarseWD + mfri + sd_fri + gd_ratio + rxfire + Condition(region), data = env)
 
 #Generate the null RDA model
-set.seed(45)
-gen_rda_lwr <- rda(spp ~ 1., data = env)
+set.seed(41)
+pfg_rda_lwr <- rda(spp ~ 1., data = env)
 
+#Conduct stepwise forward selection model building
 set.seed(1)
-gen_rda_1 <- ordistep(gen_rda_lwr, scope = formula(gen_rda_upr), trace = T)
-summary(gen_rda_1)
-gen_rda_1$anova
-anova(gen_rda_1)
+pfg_rda_1 <- ordistep(pfg_rda_lwr, scope = formula(pfg_rda_upr), trace = T)
 
-#Stepwise with adjusted R2
+#View model details
+pfg_rda_1
+anova(pfg_rda_1, by = "terms")
+
+#Check variance inflation factor of your terms. Two rules of thumb.
+#1) Anything higher than 20 should be dropped from analysis. 
+#2) Anything higher than 10 should be considered for removal.
+vif.cca(pfg_rda_1)
+
+#Here is your RDA model
+#It contains a single term (coarseWD). No other terms are significant.
+#How much variance is explained by this model:
+8.331/37.188 #(Constrained Inertia/Total Inertia)
+#22.4%
+
+#Show terms and order they were added to model
+#They will be listed in order (top to bottom > first to lest variable)
+pfg_rda_1$anova
+
+#Stepwise with adjusted R2 -- forward selection
+#This is important to do when your model has a lot of explanatory variables
+#because each time you add a new variable the R2 gets artificially inflated.
+#This method reduces the R2 by looking at the number of terms (expl. vars)
+#relative to the sample size. As the number of terms increase and the number
+#of samples decrease the adjusted R2 receives a greater reduction relative
+#to the unadjusted R2.
+
+#Two step solution for testing models.
+#Blanchet et al. 2008
+#Global test of all constraints
+#If test is significant then proceed to stepwise model building
+#Add constraints if term has P < 0.05 and adjusted R2 exceeds
+#the global adjusted R2.
+#This is how ordiR2step() builds models.
 set.seed(1)
-gen_rda_2 <- ordiR2step(gen_rda_lwr, scope = formula(gen_rda_upr), trace = T)
-gen_rda_2$anova
-anova(gen_rda_2, by = "terms")
+pfg_rda_2 <- ordiR2step(pfg_rda_lwr, pfg_rda_upr, trace = T)
+pfg_rda_2$anova
+anova(pfg_rda_2, by = "terms")
 
-#Test starting model, but with region is a conditional block
-c1 <- rda(fco_hel ~ fineWD + coarseWD + mfri + Condition(region), data = env)
-h <- how(within = Within(type = "free"), plots = Plots(strata = env$region))
-set.seed(42)
-tt <- anova(c1, permutations = h, model = "reduced")
-tt
-summary(tt)
+#RDA did not identify significant terms
+#Do any of the explantory variables differ significantly between the two regions.
+#Canopy
+t.test(canopy ~ region, data = env)
+plot(canopy ~ region, data = env)
+#No significance between regions
 
+#Forest floor
+t.test(ff ~ region, data = env)
+plot(ff ~ region, data = env)
+#No significance between regions
 
+#Coarse DWD
+t.test(coarseWD ~ region, data = env)
+plot(coarseWD ~ region, data = env)
+#No significance between regions
 
-###################################################################################################
-###################################################################################################
-###################################################################################################
-###################################################################################################
-###################################################################################################
-#Extra code -- part of previous analyses - may be useful for this analysis
+#Mean fire return interval (20 years)
+t.test(mfri ~ region, data = env)
+plot(mfri ~ region, data = env)
+#Yes, there is a significant difference
 
+#Standard deviation of mFRI
+t.test(sd_fri ~ region, data = env)
+plot(sd_fri ~ region, data = env)
+#Yes, there is a significant difference
 
+#Ratio of growing:dormant season burns
+t.test(gd_ratio ~ region, data = env)
+plot(gd_ratio ~ region, data = env)
+#No significant difference between regions
 
-###################################################################################################
-#STEP #10b: Principal Coordinate Analysis on original biomass data for log-transformed data.
-
-lcm01 <- vegdist(gco, "manhattan")#untransformed data with manhattan distance measure.
-lcm02 <- vegdist(gco_log, "bray")#untransformed data with bray-curtis distance measure.
-
-pcoa01 <- cmdscale(lcm01, k = 10, eig = T, add = F)
-pcoa02 <- cmdscale(lcm02, k = 10, eig = T, add = F)
-
-#Percent variation explained by each principal coordinate
-round(pcoa01$eig/sum(pcoa01$eig)*100,2)
-round(pcoa02$eig/sum(pcoa02$eig)*100,2)
-
-#Assign pcoa object to functions between  #>>>><<<<<# lines
-x <- pcoa01
-y <- gco
-##>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<##
-#Broken stick plot
-plot(x$eig/sum(pcoa01$eig)*100-bstick(21)*100,xlab = "PC", 
-     ylab="Actual-random % variation explained")
-abline(h=0)
-dev.off()
-
-
-#Ordination plot
-ordiplot(x, choices = c(1,2), type = "text", display = "sites", xlab = "PC 1", 
-         ylab = "PC 2")
-
-#Conduct a linear correlation analysis to determine influence of plant types
-vec.pcoa <- envfit(x$points, y, perm = 1000)
-
-#Another way of writing above function
-#vec.pcoa <- envfit(scores(x), y, perm = 1000)
-
-#View significance pf variables
-vec.pcoa
-
-#Sub-objects
-names(vec.pcoa$vectors)
-vec.pcoa$vectors$arrows
-
-#Ordination plot with variables
-dev.off()
-ordiplot(x, choices = c(1,2), type = "text", display = "sites", xlab = "PC 1", 
-         ylab = "PC 2")
-plot(vec.pcoa, p.max=0.1, col="blue")
-##>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<##
-
+#Length of time units were regularly burned
+t.test(rxfire ~ region, data = env)
+plot(rxfire ~ region, data = env)
+#Yes, there is a difference between regions
 
 
 ###################################################################################################
 ###################################################################################################
-#STEP #13: Direct gradient analysis with CAP
-
-#October 14, 2022
-#Based on tutorial here:
-#https://archetypalecology.wordpress.com/2018/02/21/distance-based-redundancy-analysis-db-rda-in-r/
-dbRDA_biomassOrig <- capscale(biomassOrig ~ Canopy + Litter + CoarseWD + FineWD + mfri_20yr + 
-                                StDevFRI_20YR + Season_20yr + RxFireMgmt, 
-                              siteEnv3, dist = "bray")
-plot(dbRDA_biomassOrig)
-anova(dbRDA_biomassOrig)
-anova(dbRDA_biomassOrig, by = 'axis', perm.max = 500)
-anova(dbRDA_biomassOrig, by = 'terms', perm.max = 200)
-scores_all <- scores(dbRDA_biomassOrig)
-scores_sites <- scores_all$sites
-scores_species <- scores_all$species
-scores_sites_environment <- cbind(scores_sites, siteEnv3[c(1:5,7:8,10)])
-correlations <- cor(scores_sites_environment)
-correlations2 <- correlations[3:10,1:2]
-correlations3 <- correlations2[c(2:4,8),1:2]
-
-#October 14, 2022
-#Based on tutorial here:
-#https://www.davidzeleny.net/anadat-r/doku.php/en:rda_cca_examples
-b.hell <- decostand(biomassOrig, 'hell')
-dbRDA <- rda(b.hell ~ mfri_20yr + Season_20yr + RxFireMgmt, siteEnv3)
-constrained_eig <- dbRDA$CCA$eig/dbRDA$tot.chi*100
-unconstrained_eig <- dbRDA$CA$eig/dbRDA$tot.chi*100
-expl_var <- c(constrained_eig, unconstrained_eig)
-barplot (expl_var[1:20], col = c(rep ('red', length (constrained_eig)), rep ('black', length (unconstrained_eig))),
-         las = 2, ylab = '% variation')
-ordiplot(dbRDA)
-head(summary(dbRDA))
-
-
-
-
-
+#Boundary layer regression for plant functional groups
 
 ###################################################################################################
-###################################################################################################
-#STEP #14: #Distance-based RDA
+############################################FUNCTION###############################################
 
-###################################################################################################
-#STEP #14a: untransformed biomass (manhattan distance)
-bo2 <- gco
-siteEnv4 <- env
-y <- vector('numeric', length = 1000)
-for (i in 1:1000)
+#Create a function that will conduct a boundary layer regression with y variable as exponent,
+#print summary of regression, and plot data
+blr <- function(a,x,y,z)
 {
-gcap1 <- capscale(bo2 ~ mfri + gd_ratio + rxfire, 
-                  data = siteEnv4, distance = "bray")
-
-gcap1s <- summary(gcap1)
-
-x <- anova(gcap1)#
-y[i] <- x[1,4]
-}
-hist(y)
-median(y)
-range(y)
-
-anova(gcap1, by = "axis")#
-anova(gcap1, by = "term")#
-
-plot(gcap1, choices = c(1,2), type = "points", display = "wa", scaling = 2)
-plot(gcap1, choices = c(1,2), type = "n", display = "lc", scaling = 2)
-text(gcap1, choices = c(1,2), labels = row.names(gco), cex = 0.8)
-round(intrasetcor(gcap1), 5)
-round(intersetcor(gcap1), 5)
-
-plot(gcap1, choices = c(1,2), display = c("wa", "sp", "bp"), scaling = 3, 
-     title = "Biomass by genera (model significance: p =)", xlab = "CAP1 (%)", 
-     ylab = "CAP2 (%)")
-
-#How does mFRI vary with CAP2 scores
-plot(gcap1s$sites[,2], env$mfri[order(gcap1s$sites[,2], decreasing = T)], type = "n")
-text(gcap1s$sites[,2], env$mfri[order(gcap1s$sites[,2], decreasing = T)], labels = rownames(env))
-
-model.1 <- lm(as.vector(env$mfri[order(gcap1s$sites[,2], decreasing = T)] ~ gcap1s$sites[,2]))
-summary(model.1)
-abline(model.1)
-segments(gcap1s$sites[,2], env$mfri[order(gcap1s$sites[,2], decreasing = T)], 
-         gcap1s$sites[,2], predict(model.1))
-
-#How does FineWD vary with CAP2 scores
-plot(gcap1s$sites[,1], env$fineWD[order(gcap1s$sites[,1], decreasing = T)], type = "n")
-text(gcap1s$sites[,1], env$fineWD[order(gcap1s$sites[,1], decreasing = T)], labels = rownames(env))
-
-model.1 <- lm(as.vector(env$fineWD[order(gcap1s$sites[,1], decreasing = T)] ~ gcap1s$sites[,1]))
-summary(model.1)
-abline(model.1)
-segments(gcap1s$sites[,1], env$fineWD[order(gcap1s$sites[,1], decreasing = T)], 
-         gcap1s$sites[,1], predict(model.1))
-
-#How does Litter vary with CAP2 scores
-plot(gcap1s$sites[,1], env$litter[order(gcap1s$sites[,1], decreasing = T)], type = "n")
-text(gcap1s$sites[,1], env$litter[order(gcap1s$sites[,1], decreasing = T)], labels = rownames(env))
-
-model.1 <- lm(as.vector(env$litter[order(gcap1s$sites[,1], decreasing = T)] ~ gcap1s$sites[,1]))
-summary(model.1)
-abline(model.1)
-segments(gcap1s$sites[,1], env$litter[order(gcap1s$sites[,1], decreasing = T)], 
-         gcap1s$sites[,1], predict(model.1))
-
-
-
-######################################
-#Looking at bunchgrasses and their relationship to herbaceous loading/
-lb$SiteName
-reg <- c(2,1,1,1,2,2,1,2,1,2,1,1,1,2,2,1,2,1,2,2,2,1)
-boxplot(lb$bunchgrass ~ region)
-boxplot(lb$herb ~ region)
-hbr <- lb$bunchgrass/(lb$bunchgrass+lb$herb)
-boxplot(hbr ~ region)
-hist(hbr[region == 1])
-hbrL <- data.frame(site = I(lb$SiteName), hbr = round(hbr,2), bunchgrass = lb$bunchgrass, region = reg)
-hbrL <- hbrL[order(hbrL$bunchgrass),]
-
-fill = vector(mode = "character")
-for(i in 1:length(hbrL$region))
-{
-  if(hbrL$region[i] == 1)
+  cf <- 0.8
+  mv <- vector(mode = "numeric")
+  fv <- vector(mode = "numeric")
+  le <- vector(mode = "numeric")
+  
+  fri <- 2:6
+  for(i in fri)
   {
-    fill[1+length(fill)] <- "dark green" 
-    fill[1+length(fill)] <- "light green"  
+    mv[i-1] <- max(y[x > i & x < i + 1])
+    fv[i-1] <- min(x[x > i & x < i + 1 & y == mv[i-1]])
+    le[i-1] <- length(y[x > i & x < i + 1])
+    
+    mv[i-1] <- mv[i-1] + 0.0001
   }
-  else
-  {
-    fill[1+length(fill)] <- "red"
-    fill[1+length(fill)] <- "orange"  
-  }
+  
+  x2 <- fv
+  y2 <- mv  
+  
+  d <- data.frame(x2,y2)
+  logmodel <- lm(y2~a(x2),data=d)
+  
+  
+  ### fake vector
+  xvec <- seq(0,8, length=101)
+  logpred <- predict(logmodel, newdata=data.frame(x2=xvec))
+  
+  #Plot with boundary layer regression
+  plot(x, y, pch = 1, xlab = "Fire Rotation (years)", ylab = "biomass (Mg/ha)", main = z)
+  points(fv, mv, pch = 16)
+  lines(xvec,logpred)
+  par(cex = 0.9)
+  #text(4.0, (max(y) - max(y)/16), paste("Intercept", round(logmodel$coefficients[1],4)), cex = cf)
+  #text(5.8, (max(y) - max(y)/16), paste("Slope", round(logmodel$coefficients[2],4)), cex = cf)
+  ms <- summary(logmodel)
+  text(5.2, (max(y) - max(y)/20), paste("r-squared", round(ms$r.squared,2)), cex = cf)
+  text(5.2, (max(y) - max(y)/10), paste("P-value", round(ms$coefficients[8],3)), cex = cf)
+  print(summary(logmodel))
+  par(cex = 0.65)
 }
 
+###################################################################################################
+############################################FUNCTION##############################################
 
 
-barplot(as.matrix(t(hbrL[,2:3])), main = "ratio of bunchgrass to herbaceous material", 
-        ylab = "", xlab = "", axes = F, beside = T, col = fill, labels = F)
-axis(2)
-text(matrix(c(seq(1.8,(nrow(hbrL))*3.0,3.0), rep(-0.02,nrow(hbrL))), nrow = nrow(hbrL), 
-            ncol = 2, byrow = F), srt = 60, adj = 1, xpd = T, labels = paste(hbrL$site), cex = 0.65)
+#Old file reassignments
+emat <- siteEnv3
+ab2mat <- fugr
 
+ev <- emat$mfri_20yr
+etext <- "mFRI (20 years)"
 
-ma <- vector(mode = "numeric")
-for(i in 1:length(hbrL$bunchgrass))
-{
-  ma[i] <- mean(hbrL$hbr[i-2:i])
-}
-
-points(ma)
-
-lm2 <- lm(ma)
-
-
-mean(c(43,45,4848,48,4848))
-
-
-######################################
-#Looking at fire rotation and it's relationship to FineWD loading
+###################################################################################################
+###################################################################################################
+#PANEL PLOT BY ORIGINAL DATA __1
 dev.off()
-plot(emat$FireRotation, emat$FineWD, type = "n")
-text(emat$FireRotation, emat$FineWD, labels = rownames(emat))
-ffm <- lm(emat$FineWD ~ emat$FireRotation)
-summary(ffm)
-abline(ffm)
-segments(emat$FireRotation, emat$FineWD, emat$FireRotation, predict(ffm))
-cor(emat$FireRotation, emat$FineWD, method = "pearson")
+set.panel(2,3)
+cf <- 0.5
 
+#1
+#Shrubs
+#Plot with sites
+species <- ab2mat$shrub
+Species <- "Shrubs"
 
-###################################################################################################
-###################################################################################################
-#TUTORIAL
+#Boundary layer regression
+blr(log, ev, species, Species)
 
-###################################################################################################
-###################################################################################################
-#STEP #XX: PCA of the covariance matrix
-pca <- rda(decostand(bl, method = "hellinger"), scale = T)#scale = T should be PCA of the correlation matrix
-#"Inertia is correlation instead of Inertia is variance
-pca
-#Plot pca
-biplot(pca, scaling = 1)
-#Use brokan stick method to determine how many PCA axes to retain
-screeplot(pca, bstick = T, type = "l", main = NULL)
-#Extract eigenvalues
-eigenvals(pca)
-summary(eigenvals(pca))
+#2
+#Graminoids
+#Plot with sites
+species <- ab2mat$graminoids
+Species <- "Graminoids"
 
+#Boundary layer regression
+blr(log, ev, species, Species)
 
-data(varespec)
-head(varespec)
-pca <- rda(decostand(varespec, method = "hellinger", scale = F))
-pca
+#3
+#Sub-shrubs
+#Plot with sites
+species <- ab2mat$subshrub
+Species <- "Sub-shrub"
 
-#Fitting environmental data
-set.seed(42)#use this to make this permutation analysis reproducibe, otherwise it will be different
-#every time, especially when number of permutations is low.
-ev <- envfit(pca ~ ., data = siteEnv3, choices = 1:2, scaling = 'symmetric', permutations = 1000)
-#options for scaling: "species", "sites", "symmetric" (scales both for species and sites), "none" (raw scores).
-#cca() hill = T, rda(): correlation = T (standardizes scores among species).
-ev
+#Boundary layer regression
+blr(log, ev, species, Species)
 
-plot(pca, display = "sites", type = "n", scaling = "symmetric")
-points(pca, display = "sites", scaling = "symmetric")
-plot(ev, add = T)
+#4
+#Forbs
+#Plot with sites
+species <- ab2mat$forb
+Species <- "Forbs"
 
-surf <- ordisurf(pca ~ FineWD, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
-surf <- ordisurf(pca ~ CoarseWD, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
-surf <- ordisurf(pca ~ RxFireMgmt, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
-surf <- ordisurf(pca ~ Litter, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
-surf <- ordisurf(pca ~ Canopy, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
-surf <- ordisurf(pca ~ mfri_20yr, data = siteEnv3, knots = 10, isotropic = T, main = NULL)
+#Boundary layer regression
+blr(log, ev, species, Species)
 
-summary(surf)
-colnames(siteEnv3)
+#5
+#Vines
+#Plot with sites
+species <- ab2mat$vine
+Species <- "Vines"
 
-###################################################################################################
-###################################################################################################
-#STEP #XX: CA
-ca <- cca(bo)#default scaling is 1.
-plot(ca)
+#Boundary layer regression
+blr(log, ev, species, Species)
 
-ca_test <- cca(varespec)
-plot(ca_test)
+#6
+#Understory trees
+#Plot with sites
+species <- ab2mat$understory
+Species <- "Understory trees"
 
-###################################################################################################
-###################################################################################################
-#STEP #XX: CCA
-m1 <- cca(gco ~ ., data = env)
-m1
-summary(m1)
-set.seed(45)#use this so results are reproducible
-pstat <- permustats(anova(m1))#anova is testing the entire model for significance.
-summary(pstat)
-densityplot(pstat)
-#about 98% of the permuted F values were lower than the observed F statistic
-#this is good, we want the Observed F to be in the extreme upper tail, i.e., we want it to be big.
+#Boundary layer regression
+blr(log, ev, species, Species)
 
-set.seed(45)
-perm <- anova(m1)
-perm
-#P-value is 0.017, about 98% of the permuted values had an F-statistics that were smaller than observed.
-
-#Arguments for constrained ordination with cca
-args(anova.cca)
-#by arg specifies what kind of test to use.
-#there are four. Be careful with sequential testing because order of terms added can change if 
-#terms are not orthogonal.
-#by axis -- tests by first axis, then second axis is tested.
-#how much extra info can be explained by additional axes.
-
-upr <- cca(bo ~ ., data = siteEnv3)
-lwr <- cca(bo ~ 1, data = siteEnv3)
-set.seed(1)
-mods <- ordistep(lwr, scope = formula(upr), trace = 0)
-
-set.seed(45)
-anova(mods, by = "axis")
-#by "terms" can result in variables having different significance depending on the order they are added. Be careful with this unless you have a robust experiment.
-#by "margin" is more helpful
-#effect of variables given other variables.
-anova(mods, by = "margin")
-
-#use decorana() to check gradient length.
-#cca is good for a dataset with a long gradient.
-plot(m1)
-#no arch in site distribution across CCA1 -- indicates shorter gradient length.
-
-#Forward selection model building
-m2 <- ordistep(lwr, scope = formula(m1), trace = F)
-m2
-#With two of the environmental variables (RxFireMgmt and FineWD we can explain about 28% of the data)
-#The first axis (CCA1) explains about 65% of the variation in the model (CCA1 Eigenvalue: 0.12763 / Constrained Inertia: 0.1956)
-0.12763/0.1956
-
-#Still a lot of structure in the data not explained by the constrained model. 
-#First unconstrained axis explains more of the variation than the first constrained axis
-#The first 3 unconstrained axes esplain more variation than any of the two constrained axes.
-
-plot(m2)
-#RxFireMgmt and FineWD are nearly at 45 degs from the CCA axes so difficult to say which they best line up with.
-m2$anova
-#RxFireMgmt was the first term to be selected
-#FineWD was the second, and last term.
-
-#Can also use rda() instead of cca() if you are worried about the arch effect.
-#Do a Hellinger transformation on species data
-spph <- decostand(bo, method = "hellinger")
-m3 <- rda(spph ~ ., data = siteEnv3)
-lwr <- rda(spph ~ 1., data = siteEnv3)
-m4 <- ordistep(lwr, scope = formula(m3), trace = F)
-m4#similar output to cca
-plot(m4)#similar to cca
-#species are sort of squished into the center of the plot. This is not an absolute product of the model,
-#it's their relative positions to each other, the sites, and the axes that matter.
-#You can spread them out by changing your scaling.
-
-#Stepwise with adjusted R2
-m5 <- ordiR2step(lwr, scope = formula(m3), trace = F)
-m5$anova
-
-m6 <- ordiR2step(lwr, scope = formula(m1), trace = F)
-m6$anova
-
-#Restricted permutation tests
-#need to do this to account for dependencies among observations
-#in this case you have spatial correlation because half of the sites
-#are at Eglin and half are at Appalachicola/St. Marks
-#permute library is a dependency on vegan so you don't need to load it seperately from vegan
-#hierarchy
-#sample level (plots for your study)
-#plot level (sites for your study)
-#block level (region for your study)
-#blocks are not permuted
-#sites are not exchanged between plots.
-#variation between blocks must be excluded from tests
-#Use + Condition(blocks)
-#function for changing data type
-#example: env <- transform(env, year = as.numeric(as.character(year)))
-#useful when R imports data in the wrong format.
-env <- transform(siteEnv3, Region = as.factor(Region))
-c1 <- rda(bo ~ Litter + FineWD + mfri_20yr + StDevFRI_20YR + Season_20yr + RxFireMgmt + Condition(Region), data = env)
-h <- how(within = Within(type = "free"), plots = Plots(strata = env$Region))
-set.seed(42)
-tt <- anova(c1, permutations = h, model = "reduced")
-tt
-summary(tt)
-summary(c1)
-c1$anova
-
-
-length(env$Region)
-length(bo[,1])
-
-###################################################################################################
-###################################################################################################
-#STEP #XX: RDA
-rda1 <- rda(bo ~ ., data = siteEnv3)
-rda1
-#Inertia is variance, this is because you did not standardize species variables (from tutorial).
-#shouldn't be the env. variables that get standardized? If it was standardized Total = 1.00.
-
-
-
-plot(ca)
-
-ca_test <- cca(varespec)
-plot(ca_test)
+#END
