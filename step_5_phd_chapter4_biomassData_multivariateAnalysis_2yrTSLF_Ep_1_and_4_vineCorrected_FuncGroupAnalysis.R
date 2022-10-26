@@ -547,6 +547,12 @@ t.test(rxfire ~ region, data = env)
 plot(rxfire ~ region, data = env)
 #Yes, there is a difference between regions
 
+###################################################################################################
+###################################################################################################
+#Generate full RDA model
+set.seed(1)
+pfg_rda_upr <- rda(spp ~ canopy + ff + coarseWD + mfri + sd_fri + gd_ratio + rxfire + Condition(region), data = env)
+
 
 ###################################################################################################
 ###################################################################################################
@@ -557,44 +563,56 @@ plot(rxfire ~ region, data = env)
 
 #Create a function that will conduct a boundary layer regression with y variable as exponent,
 #print summary of regression, and plot data
-blr <- function(a,x,y,z)
+blr <- function(v1,v2,v3,v4,v5,v6,v7)
 {
   cf <- 0.8
   mv <- vector(mode = "numeric")
   fv <- vector(mode = "numeric")
   le <- vector(mode = "numeric")
+  lower <- min(floor(v4*v2)/v2)
+  upper.1 <- max(ceiling(v4*v2)/v2)
+  upper.2 <- upper.1 - 1/v2
+  brk.pt <- (upper.1-lower)/5
+  bins <- seq(lower, upper.2, brk.pt)
   
-  fri <- 2:6
-  for(i in fri)
+  for(i in 1:length(bins))
   {
-    mv[i-1] <- max(y[x > i & x < i + 1])
-    fv[i-1] <- min(x[x > i & x < i + 1 & y == mv[i-1]])
-    le[i-1] <- length(y[x > i & x < i + 1])
-    
-    mv[i-1] <- mv[i-1] + 0.0001
+    if(i == 1)
+    {
+      mv[i] <- max(v5[v4 >= bins[i] & v4 <= bins[i] + brk.pt])
+      fv[i] <- min(v4[v4 >= bins[i] & v4 <= bins[i] + brk.pt & v5 == mv[i]])
+      le[i] <- length(v5[v4 >= bins[i] & v4 <= bins[i] + brk.pt])
+      mv[i] <- mv[i] + 0.0001
+    } else
+    {
+      mv[i] <- max(v5[v4 > bins[i] & v4 <= bins[i] + brk.pt])
+      fv[i] <- min(v4[v4 > bins[1] & v4 <= bins[i] + brk.pt & v5 == mv[i]])
+      le[i] <- length(v5[v4 > bins[i] & v4 <= bins[i] + brk.pt])
+      mv[i] <- mv[i] + 0.0001
+    }
   }
   
-  x2 <- fv
-  y2 <- mv  
+  v42 <- fv+0.00001
+  v52 <- mv  
   
-  d <- data.frame(x2,y2)
-  logmodel <- lm(y2~a(x2),data=d)
-  
+  d <- data.frame(v42,v52)
+  logmodel <- lm(v52~v1(v42),data=d)
   
   ### fake vector
-  xvec <- seq(0,8, length=101)
-  logpred <- predict(logmodel, newdata=data.frame(x2=xvec))
+  v4vec <- seq(0.001,8, length=101)
+  logpred <- predict(logmodel, newdata=data.frame(v42=v4vec))
   
   #Plot with boundary layer regression
-  plot(x, y, pch = 1, xlab = "Fire Rotation (years)", ylab = "biomass (Mg/ha)", main = z)
+  plot(v4, v5, pch = 1, xlab = v7, ylab = "biomass (Mg/ha)", main = v6)
   points(fv, mv, pch = 16)
-  lines(xvec,logpred)
+  lines(v4vec,logpred)
   par(cex = 0.9)
   #text(4.0, (max(y) - max(y)/16), paste("Intercept", round(logmodel$coefficients[1],4)), cex = cf)
   #text(5.8, (max(y) - max(y)/16), paste("Slope", round(logmodel$coefficients[2],4)), cex = cf)
+  xcoord <- (upper.2 - lower)*v3 + lower
   ms <- summary(logmodel)
-  text(5.2, (max(y) - max(y)/20), paste("r-squared", round(ms$r.squared,2)), cex = cf)
-  text(5.2, (max(y) - max(y)/10), paste("P-value", round(ms$coefficients[8],3)), cex = cf)
+  text(xcoord, (max(v5) - max(v5)/22), paste("r-squared", round(ms$r.squared,2)), cex = cf)
+  text(xcoord, (max(v5) - max(v5)/8), paste("P-value", round(ms$coefficients[8],3)), cex = cf)
   print(summary(logmodel))
   par(cex = 0.65)
 }
@@ -605,10 +623,35 @@ blr <- function(a,x,y,z)
 
 #Old file reassignments
 emat <- siteEnv3
-ab2mat <- fugr
+ab2mat <- fco
 
+#ENVIRONMENTAL VARIABLES
+
+#Fire Rotation
+#Environmental variable
 ev <- emat$mfri_20yr
-etext <- "mFRI (20 years)"
+#Label for X-axis
+envLabel <- "mFRI (Years)"
+#Decimals for calculating break points for fixed width windows (1 is nearest whole number, 10 is nearest
+#tenth and so on)
+dec <- 1
+
+#Season
+#Environmental variable
+ev <- emat$Season_20yr
+#Label for X-axis
+envLabel <- "Season"
+#Decimals for calculating break points for fixed width windows (1 is nearest whole number, 10 is nearest
+#tenth and so on)
+dec <- 10
+
+#STATIC VARIABLES
+#Type of regression model to use
+model <- log
+#Multiplier for x coordinate of legend (0-1).
+#0 = minimum x coordinate
+#1 = maximum x coordinate
+xcoord <- 0.8
 
 ###################################################################################################
 ###################################################################################################
@@ -621,54 +664,54 @@ cf <- 0.5
 #Shrubs
 #Plot with sites
 species <- ab2mat$shrub
-Species <- "Shrubs"
+speciesLabel <- "Shrubs"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #2
 #Graminoids
 #Plot with sites
 species <- ab2mat$graminoids
-Species <- "Graminoids"
+speciesLabel <- "Graminoids"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #3
 #Sub-shrubs
 #Plot with sites
 species <- ab2mat$subshrub
-Species <- "Sub-shrub"
+speciesLabel <- "Sub-shrub"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #4
 #Forbs
 #Plot with sites
 species <- ab2mat$forb
-Species <- "Forbs"
+speciesLabel <- "Forbs"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #5
 #Vines
 #Plot with sites
 species <- ab2mat$vine
-Species <- "Vines"
+speciesLabel <- "Vines"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #6
 #Understory trees
 #Plot with sites
 species <- ab2mat$understory
-Species <- "Understory trees"
+speciesLabel <- "Understory trees"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #END

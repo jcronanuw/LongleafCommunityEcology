@@ -78,50 +78,62 @@ siteEnv3 <- siteEnv2[,-c(11,12)]
 
 #Create a function that will conduct a boundary layer regression with y variable as exponent,
 #print summary of regression, and plot data
-blr <- function(a,x,y,z)
+blr <- function(v1,v2,v3,v4,v5,v6,v7)
 {
   cf <- 0.8
   mv <- vector(mode = "numeric")
   fv <- vector(mode = "numeric")
   le <- vector(mode = "numeric")
+  lower <- min(floor(v4*v2)/v2)
+  upper.1 <- max(ceiling(v4*v2)/v2)
+  upper.2 <- upper.1 - 1/v2
+  brk.pt <- (upper.1-lower)/5
+  bins <- seq(lower, upper.2, brk.pt)
   
-  fri <- 2:6
-  for(i in fri)
+  for(i in 1:length(bins))
   {
-    mv[i-1] <- max(y[x > i & x < i + 1])
-    fv[i-1] <- min(x[x > i & x < i + 1 & y == mv[i-1]])
-    le[i-1] <- length(y[x > i & x < i + 1])
-    
-    mv[i-1] <- mv[i-1] + 0.0001
+    if(i == 1)
+    {
+      mv[i] <- max(v5[v4 >= bins[i] & v4 <= bins[i] + brk.pt])
+      fv[i] <- min(v4[v4 >= bins[i] & v4 <= bins[i] + brk.pt & v5 == mv[i]])
+      le[i] <- length(v5[v4 >= bins[i] & v4 <= bins[i] + brk.pt])
+      mv[i] <- mv[i] + 0.0001
+    } else
+    {
+      mv[i] <- max(v5[v4 > bins[i] & v4 <= bins[i] + brk.pt])
+      fv[i] <- min(v4[v4 > bins[1] & v4 <= bins[i] + brk.pt & v5 == mv[i]])
+      le[i] <- length(v5[v4 > bins[i] & v4 <= bins[i] + brk.pt])
+      mv[i] <- mv[i] + 0.0001
+    }
   }
   
-  x2 <- fv
-  y2 <- mv  
+  v42 <- fv+0.00001
+  v52 <- mv  
   
-  d <- data.frame(x2,y2)
-  logmodel <- lm(y2~a(x2),data=d)
-  
+  d <- data.frame(v42,v52)
+  logmodel <- lm(v52~v1(v42),data=d)
   
   ### fake vector
-  xvec <- seq(0,8, length=101)
-  logpred <- predict(logmodel, newdata=data.frame(x2=xvec))
+  v4vec <- seq(0.001,8, length=101)
+  logpred <- predict(logmodel, newdata=data.frame(v42=v4vec))
   
   #Plot with boundary layer regression
-  plot(x, y, pch = 1, xlab = "Fire Rotation (years)", ylab = "biomass (Mg/ha)", main = z)
+  plot(v4, v5, pch = 1, xlab = v7, ylab = "biomass (Mg/ha)", main = v6)
   points(fv, mv, pch = 16)
-  lines(xvec,logpred)
+  lines(v4vec,logpred)
   par(cex = 0.9)
   #text(4.0, (max(y) - max(y)/16), paste("Intercept", round(logmodel$coefficients[1],4)), cex = cf)
   #text(5.8, (max(y) - max(y)/16), paste("Slope", round(logmodel$coefficients[2],4)), cex = cf)
+  xcoord <- (upper.2 - lower)*v3 + lower
   ms <- summary(logmodel)
-  text(5.2, (max(y) - max(y)/20), paste("r-squared", round(ms$r.squared,2)), cex = cf)
-  text(5.2, (max(y) - max(y)/10), paste("P-value", round(ms$coefficients[8],3)), cex = cf)
+  text(xcoord, (max(v5) - max(v5)/22), paste("r-squared", round(ms$r.squared,2)), cex = cf)
+  text(xcoord, (max(v5) - max(v5)/8), paste("P-value", round(ms$coefficients[8],3)), cex = cf)
   print(summary(logmodel))
   par(cex = 0.65)
 }
 
 ###################################################################################################
-############################################FUNCTION###############################################
+############################################FUNCTION##############################################
 
 ###################################################################################################
 ###################################################################################################
@@ -279,16 +291,42 @@ new_order <- with(t10_vec, reorder(species, biomass, mean , na.rm=T))
 
 #Generate box plot
 boxplot(t10_vec$biomass ~ new_order)
+
 ###################################################################################################
 ###################################################################################################
-#STEP 13: BOUNDARY LAYER REGRESSION FOR FIRE ROTATION
+#STEP 13: BOUNDARY LAYER REGRESSION
 
 #Old file reassignments
 emat <- siteEnv3
 ab2mat <- spo
 
+#ENVIRONMENTAL VARIABLES
+
+#Fire Rotation
+#Environmental variable
 ev <- emat$mfri_20yr
-etext <- "mFRI (20 years)"
+#Label for X-axis
+envLabel <- "mFRI (Years)"
+#Decimals for calculating break points for fixed width windows (1 is nearest whole number, 10 is nearest
+#tenth and so on)
+dec <- 1
+
+#Season
+#Environmental variable
+ev <- emat$Season_20yr
+#Label for X-axis
+envLabel <- "Season"
+#Decimals for calculating break points for fixed width windows (1 is nearest whole number, 10 is nearest
+#tenth and so on)
+dec <- 10
+
+#STATIC VARIABLES
+#Type of regression model to use
+model <- log
+#Multiplier for x coordinate of legend (0-1).
+#0 = minimum x coordinate
+#1 = maximum x coordinate
+xcoord <- 0.8
 
 ###################################################################################################
 ###################################################################################################
@@ -301,254 +339,95 @@ cf <- 0.5
 #Runner Oak
 #Plot with sites
 species <- ab2mat$QUMI2
-Species <- "Quercus minima"
+speciesLabel <- "Quercus minima"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #2
 #Saw Palmetto
 #Plot with sites
 species <- ab2mat$SERE2
-Species <- "Serenoa repens"
+speciesLabel <- "Serenoa repens"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #3
 #Wiregrass
 #Plot with sites
 species <- ab2mat$ARST5
-Species <- "Aristida stricta"
+speciesLabel <- "Aristida stricta"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #4
 #Gallberry
 #Plot with sites
 species <- ab2mat$ILGL
-Species <- "Ilex glabra"
+speciesLabel <- "Ilex glabra"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #5
 #Lyonia
 #Plot with sites
 species <- ab2mat$LYFE
-Species <- "Lyonia ferruginea"
+speciesLabel <- "Lyonia ferruginea"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #6
 #Darrow's Blueberry
 #Plot with sites
 species <- ab2mat$VADA
-Species <- "Vaccinium darrowii"
+speciesLabel <- "Vaccinium darrowii"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #7
 #Little Bluestem
 #Plot with sites
 species <- ab2mat$ANGL10
-Species <- "Andropogon glaucopsis"
+speciesLabel <- "Andropogon glaucopsis"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #8
 #Huckleberry
 #Plot with sites
 species <- ab2mat$GADU
-Species <- "Gaylussacia dumosa"
+speciesLabel <- "Gaylussacia dumosa"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #9
 #Greenbriar
 #Plot with sites
 species <- ab2mat$SMILA2
-Species <- "Smilax auriculata"
+speciesLabel <- "Smilax auriculata"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 #10
 #Yellow Jessamine
 #Plot with sites
 species <- ab2mat$GESE
-Species <- "Gelsemium sempervirens"
+speciesLabel <- "Gelsemium sempervirens"
 
 #Boundary layer regression
-blr(log, ev, species, Species)
-
-
-#GROWING-DORMANT SEASON BURN RATIO (WORK IN PROGRESS)
-
-
-###################################################################################################
-############################################FUNCTION###############################################
-
-#Create a function that will conduct a boundary layer regression with y variable as exponent,
-#print summary of regression, and plot data
-blr <- function(a,x,y,z)
-{
-  cf <- 0.8
-  mv <- vector(mode = "numeric")
-  fv <- vector(mode = "numeric")
-  le <- vector(mode = "numeric")
-  
-  fri <- 0:100
-  for(i in fri)
-  {
-    mv[i-1] <- max(y[x > i & x < i + 1])
-    fv[i-1] <- min(x[x > i & x < i + 1 & y == mv[i-1]])
-    le[i-1] <- length(y[x > i & x < i + 1])
-    
-    mv[i-1] <- mv[i-1] + 0.0001
-  }
-  
-  x2 <- fv
-  y2 <- mv  
-  
-  d <- data.frame(x2,y2)
-  logmodel <- lm(y2~a(x2),data=d)
-  
-  
-  ### fake vector
-  xvec <- seq(0,8, length=101)
-  logpred <- predict(logmodel, newdata=data.frame(x2=xvec))
-  
-  #Plot with boundary layer regression
-  plot(x, y, pch = 1, xlab = "Fire Rotation (years)", ylab = "biomass (Mg/ha)", main = z)
-  points(fv, mv, pch = 16)
-  lines(xvec,logpred)
-  par(cex = 0.9)
-  #text(4.0, (max(y) - max(y)/16), paste("Intercept", round(logmodel$coefficients[1],4)), cex = cf)
-  #text(5.8, (max(y) - max(y)/16), paste("Slope", round(logmodel$coefficients[2],4)), cex = cf)
-  ms <- summary(logmodel)
-  text(80, (max(y) - max(y)/20), paste("r-squared", round(ms$r.squared,2)), cex = cf)
-  text(80, (max(y) - max(y)/10), paste("P-value", round(ms$coefficients[8],3)), cex = cf)
-  print(summary(logmodel))
-  par(cex = 0.65)
-}
-
-###################################################################################################
-############################################FUNCTION##############################################
-
-###################################################################################################
-###################################################################################################
-#STEP 13: BOUNDARY LAYER REGRESSION FOR FIRE ROTATION
-
-#Old file reassignments
-emat <- siteEnv3
-ab2mat <- spo
-
-ev <- round(emat$Season_20yr * 100,1)
-etext <- "Growing Season Burns (%)"
-
-###################################################################################################
-###################################################################################################
-#PANEL PLOT BY ORIGINAL DATA __1
-dev.off()
-set.panel(2,5)
-cf <- 0.5
-
-#1
-#Runner Oak
-#Plot with sites
-species <- ab2mat$QUMI2
-Species <- "Quercus minima"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#2
-#Saw Palmetto
-#Plot with sites
-species <- ab2mat$SERE2
-Species <- "Serenoa repens"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#3
-#Wiregrass
-#Plot with sites
-species <- ab2mat$ARST5
-Species <- "Aristida stricta"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#4
-#Gallberry
-#Plot with sites
-species <- ab2mat$ILGL
-Species <- "Ilex glabra"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#5
-#Lyonia
-#Plot with sites
-species <- ab2mat$LYFE
-Species <- "Lyonia ferruginea"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#6
-#Darrow's Blueberry
-#Plot with sites
-species <- ab2mat$VADA
-Species <- "Vaccinium darrowii"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#7
-#Little Bluestem
-#Plot with sites
-species <- ab2mat$ANGL10
-Species <- "Andropogon glaucopsis"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#8
-#Huckleberry
-#Plot with sites
-species <- ab2mat$GADU
-Species <- "Gaylussacia dumosa"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#9
-#Greenbriar
-#Plot with sites
-species <- ab2mat$SMILA2
-Species <- "Smilax auriculata"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
-
-#10
-#Yellow Jessamine
-#Plot with sites
-species <- ab2mat$GESE
-Species <- "Gelsemium sempervirens"
-
-#Boundary layer regression
-blr(log, ev, species, Species)
+blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 
 ###################################################################################################
 ###################################################################################################
 #END
+
+
+
