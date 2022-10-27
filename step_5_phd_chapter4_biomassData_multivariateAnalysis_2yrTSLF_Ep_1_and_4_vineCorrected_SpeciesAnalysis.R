@@ -292,6 +292,19 @@ new_order <- with(t10_vec, reorder(species, biomass, mean , na.rm=T))
 #Generate box plot
 boxplot(t10_vec$biomass ~ new_order)
 
+#ARST5
+wg <- data.frame(site = rownames(spo), ARST5 = round(spo$ARST5,2), mfri = siteEnv3$mfri_20yr)
+wg[order(wg$mfri),]
+
+#ANGL10
+bs <- data.frame(site = rownames(spo), ANGL10 = round(spo$ANGL10,2), mfri = siteEnv3$mfri_20yr)
+bs[order(bs$mfri),]
+
+#GESE
+yj <- data.frame(site = rownames(spo), GESE = round(spo$GESE,2), gd = siteEnv3$Season_20yr)
+yj[order(yj$gd),]
+
+
 ###################################################################################################
 ###################################################################################################
 #STEP 13: BOUNDARY LAYER REGRESSION

@@ -336,6 +336,9 @@ round(range(load_total),2)
 #Shrub loading
 round(stat.desc(wood_load),2)
 
+#FORB
+fo <- data.frame(site = rownames(fugr), forb = round(fugr$forb,2), mfri = siteEnv4$mfri_20yr)
+fo[order(fo$mfri),]
 
 ###################################################################################################
 ###################################################################################################
@@ -549,10 +552,12 @@ plot(rxfire ~ region, data = env)
 
 ###################################################################################################
 ###################################################################################################
-#Generate full RDA model
+#Conduct a RDA only on contraints you have a hypothesis for.
 set.seed(1)
-pfg_rda_upr <- rda(spp ~ canopy + ff + coarseWD + mfri + sd_fri + gd_ratio + rxfire + Condition(region), data = env)
-
+pfg_rda_a <- rda(spp ~ mfri + gd_ratio + Condition(region), data = env)
+vif.cca(pfg_rda_a)
+pfg_rda_a
+pfg_rda_a$anova
 
 ###################################################################################################
 ###################################################################################################
