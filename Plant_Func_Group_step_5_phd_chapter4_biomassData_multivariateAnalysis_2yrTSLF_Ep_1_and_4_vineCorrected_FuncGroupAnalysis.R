@@ -120,10 +120,11 @@ siteBiomass6 <- siteBiomass5[,!colnames(siteBiomass5) %in% c("so")]
 fugr <- drop.var(siteBiomass6, min.fo = 1)#biostats
 
 #Show taxa that were dropped:
+
 dropped <- match(colnames(siteBiomass6), colnames(fugr))
-cbind(colnames(siteBiomass6), dropped)
-length(dropped)
-length(dropped) - length(dropped[is.na(dropped) == T])
+#cbind(colnames(siteBiomass6), dropped)
+#length(dropped)
+#length(dropped) - length(dropped[is.na(dropped) == T])
 #No drops.
 
 ###################################################################################################
@@ -135,62 +136,85 @@ length(dropped) - length(dropped[is.na(dropped) == T])
 
 #Summary stats
 pfg_ss <- round(stat.desc(fugr),2)
+
 #sort(pfg_ss[9,], decreasing = T)
 
 #Look at how data is distributed
-foa.plots(fugr)
+
+#foa.plots(fugr)
 
 #Drop rare genus < 10% of sites.
 fco <- drop.var(fugr, min.po=10)
 
 #Check to see how many genus were dropped for untransformed biomass data
-length(fugr[1,])#
-length(fco[1,])#
+
+#length(fugr[1,])#
+#length(fco[1,])#
+
 #No drops
 
-str(fco)
+#Double check number of plant functional groups (cols) and sites (rows)
+
+#str(fco)
+
 #21 obs and 7 variables
 
+#Check summary stats for each plant functional group.
 #uv.plots displays histogram, box and whisker, cumulative distribution and normal q-q plots
 #in one pane for each variable.
-uv.plots(fco)#About half of functional groups  are right skewed with a long right tail. 
+
+#uv.plots(fco)
+
+#About half of functional groups  are right skewed with a long right tail. 
 #Conduct a log tranformation
 
-#What percent of values are zero, if it is over 50% you should consider changing the data
+#What percent of values are zero? If it is over 50% you should consider changing the data
 #to presence/absence
-length(fco[fco == 0])/(length(fco[1,])*length(fco[,1]))
+
+#length(fco[fco == 0])/(length(fco[1,])*length(fco[,1]))
+
 #~8% zero values >>> no need to convert data to presence/absence
 
 #Look at correlation between genus variables.
 #generate table (you need to run correlation_matrix() function for this to work:
 #https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
-scm <- correlation_matrix(as.data.frame(fco), type = "pearson", show_significance = T, 
+
+scm.fco <- correlation_matrix(as.data.frame(fco), type = "pearson", show_significance = T, 
                          digits = 2, use = "lower", replace_diagonal = T)
-chart.Correlation(fco, method = "pearson")#performanceAlanlytics
+#chart.Correlation(fco, method = "pearson")#performanceAlanlytics
+
 #Understory trees and vines are highly correlated (0.65). All other are below 0.55.
 
 #log transform genera data.
 fco_log <- decostand(fco, method = "log")
 
 #Check distributions
-uv.plots(fco_log)
+
+#uv.plots(fco_log)
+
 #Improved for all.
 
 #Hellinger transformation on genera data
 fco_hel <- decostand(fco, method = "hellinger")
+
 #Check distributions
-uv.plots(fco_hel)
+
+#uv.plots(fco_hel)
+
 #Improvement over log transformation distributions, they are more 'normal'.
 
 #########################################################
 #6c: Summary stats for environmental data
 
 #Show how environmental variables are correlated.
-chart.Correlation(siteEnv3)
-scm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_significance = T, 
+
+scm.env <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_significance = T, 
                           digits = 2, use = "lower", replace_diagonal = T)
+
+#chart.Correlation(siteEnv3)
+
 #Use 0.55 as cut-off for removing variables with high colinearity 
-#Sort of arbitrary, but chose (Adam et al. 2013).
+#Sort of arbitrary, but chose cutoff described in Adam et al. 2013 t.
 #Variables with correlation >= 0.55
 #1) 10-yr and 20-yr mFRI
 #drop 10-yr
@@ -205,16 +229,20 @@ scm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_signif
 #region as a conditional constraint.
 
 #Remove env. variables selected above
+
 siteEnv4 <- siteEnv3[,-c(6,9)]#dropping the 10-yr values for mean fire return
 #interval and ratio of growing:dormant season burns.
 
 #Create a new vector with two regions (east and west) instead of 3 (SMNWR, APNF, and EAFB).
+
 region <- as.factor(ifelse(siteEnv3$Region == 3, 2, siteEnv3$Region))
 
 #Check distributions of environmental data
 #Remove categories
+
 check_env <- siteEnv4[,-c(9,10)]
-uv.plots(check_env)
+#uv.plots(check_env)
+
 #Right skewed
 #1) Coarse DWD
 #2) Std Dev on 20-year fire regime
@@ -237,8 +265,9 @@ env <- data.frame(canopy = siteEnv4$Canopy,
                      region = as.factor(region))
 rownames(env) <- rownames(siteEnv4)
 
+#Recheck distributions for environmental variables.
 
-uv.plots(env)#looks good
+#uv.plots(env)#looks good
 
 #multivariate outliers
 #this function if from biostats and I'm not sure how it selects outliers so I am going
@@ -252,14 +281,15 @@ uv.plots(env)#looks good
 #That number is a bit arbitrary. If it was 2.5 you wouldn't have any outliers
 
 #Environmental data
-mv.outliers(env[1:7], method = "euclidean", sd.limit =2.0)
+#mv.outliers(env[1:7], method = "euclidean", sd.limit =2.0)
 
 #biomass
-mv.outliers(fco, method = "bray", sd.limit =2.0)
+#mv.outliers(fco, method = "bray", sd.limit =2.0)
 
 #Drop S330 because it is an outier within the environmental dataset. This will also create a balanced
 #sample design for regional blocks and allow me to randomize within regions for the RDA with region
 #as a conditional term.
+
 env <- env[rownames(env) != "S330",]
 fco_log <- fco_log[rownames(fco_log) != "S330",]
 fco <- fco[rownames(fco) != "S330",]
@@ -295,50 +325,68 @@ hseco <- mapply(function(x) {length(dTable[,3][dTable[,3] == udom[x]])}, 1:lengt
 hdom <- data.frame(Species = I(udom), Primary = hprim, Secondary = hseco)
 h2dom <- hdom[order(hdom[,2], decreasing = T),]
 
-par(mai = c(2.5,1.2,1,1))
-barplot(t(cbind(h2dom$Primary,h2dom$Secondary)), main = "", 
-        xaxt = "n", ylab = "Number of sites", xlab = "", axes = F, beside = T, 
-        col = c("white", "dark grey"))
-axis(2)
-text(matrix(c(seq(2,nrow(h2dom)*3,3), rep(-0.25,nrow(h2dom))), nrow = nrow(h2dom), 
-            ncol = 2, byrow = F), srt = 60, adj = 1, xpd = T, labels = paste(h2dom$Species), 
-     cex = 0.95)
+#Generate plot of primary and secondary dominant understory plant functional groups.
 
-legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "dark grey"), bty = "n")
+#par(mai = c(2.5,1.2,1,1))
+#barplot(t(cbind(h2dom$Primary,h2dom$Secondary)), main = "", 
+#        xaxt = "n", ylab = "Number of sites", xlab = "", axes = F, beside = T, 
+#        col = c("white", "dark grey"))
+#axis(2)
+#text(matrix(c(seq(2,nrow(h2dom)*3,3), rep(-0.25,nrow(h2dom))), nrow = nrow(h2dom), 
+#            ncol = 2, byrow = F), srt = 60, adj = 1, xpd = T, labels = paste(h2dom$Species), 
+#     cex = 0.95)
+#legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "dark grey"), bty = "n")
 
 
-#Summary stats
+#Generate summary stats for cleaned plant functional group data.
 fss <- round(stat.desc(fco),2)
-fss
-fco
-herb_mat <- cbind(fco$graminoids, fco$forb)
-wood_mat <- cbind(fco$shrub, fco$subshrub, fco$understory, fco$vine)
-herb_load <- apply(herb_mat, 1, sum)
-wood_load <- apply(wood_mat, 1, sum)
-load_mat <- cbind(herb_load, wood_load)
-rownames(load_mat) <- rownames(fco)
-colnames(load_mat) <- c("herb", "woody")
-load_total <- apply(load_mat, 1, sum)
-herb_perc <- round((herb_load/load_total)*100,1)
-median(herb_perc)
-plot(sort(herb_perc), decreasing = T)
+
+#fss
+#fco
+#herb_mat <- cbind(fco$graminoids, fco$forb)
+#wood_mat <- cbind(fco$shrub, fco$subshrub, fco$understory, fco$vine)
+#herb_load <- apply(herb_mat, 1, sum)
+#wood_load <- apply(wood_mat, 1, sum)
+#load_mat <- cbind(herb_load, wood_load)
+#rownames(load_mat) <- rownames(fco)
+#colnames(load_mat) <- c("herb", "woody")
+#load_total <- apply(load_mat, 1, sum)
+#herb_perc <- round((herb_load/load_total)*100,1)
+#median(herb_perc)
+#plot(sort(herb_perc), decreasing = T)
 
 #Mean percent herb loading
-mean(herb_perc)
+#mean(herb_perc)
 
 #Range for percent herb loading
-range(herb_perc)
+#range(herb_perc)
 
 #Mean and range of live understory loading
-round(mean(load_total),2)
-round(range(load_total),2)
+#round(mean(load_total),2)
+#round(range(load_total),2)
 
 #Shrub loading
-round(stat.desc(wood_load),2)
+#round(stat.desc(wood_load),2)
 
 #FORB
-fo <- data.frame(site = rownames(fugr), forb = round(fugr$forb,2), mfri = siteEnv4$mfri_20yr)
-fo[order(fo$mfri),]
+#fo <- data.frame(site = rownames(fugr), forb = round(fugr$forb,2), mfri = siteEnv4$mfri_20yr)
+#fo[order(fo$mfri),]
+
+#Generate more specific data used in discussion section
+forb <- data.frame(mfri = env$mfri, forb = fco$forb)
+gram <- data.frame(mfri = env$mfri, graminoids = fco$graminoids)
+
+#Show loading for specified mfri window used in boundary layer regressions
+#Forbs
+mfri.min <- 6.0#low end of mfri (nearest whole number)
+mfri.max <- 7.0#high end of mfri (nearest whole number)
+sort(forb$forb[forb$mfri > mfri.min & forb$mfri <= mfri.max ], decreasing = T)
+
+#Graminoids
+mfri.min <- 2.0#low end of mfri (nearest whole number)
+mfri.max <- 7.0#high end of mfri (nearest whole number)
+sort(gram$graminoids[gram$mfri > mfri.min & gram$mfri <= mfri.max ], decreasing = T)
+gram[order(gram$graminoids),]
 
 ###################################################################################################
 ###################################################################################################
@@ -369,6 +417,12 @@ pca <- rda(decostand(fco_log, method = "hellinger"), scale = T)#scale = T should
 #arg: scale = T - this standardizes the data and gives it unit variance (i.e., all variables have a variance = 1)
 #the rda() function automatically centers the data around the mean for each variable.
 
+scores_1 <- scores(pca)
+sc <- scores_1$sites[,1]
+plot(sc, env$mfri)
+plot(sc, env$coarseWD)
+cor(sc, env$mfri)
+cor(sc, env$coarseWD)
 #Provide info on PCA
 pca
 summary(pca)
@@ -492,6 +546,15 @@ vif.cca(pfg_rda_1)
 #Show terms and order they were added to model
 #They will be listed in order (top to bottom > first to lest variable)
 pfg_rda_1$anova
+
+scores_1 <- scores(pfg_rda_1)
+sc <- scores_1$sites[,2]
+plot(sc, env$mfri)
+
+plot(sc, env$coarseWD)
+
+
+
 
 #Stepwise with adjusted R2 -- forward selection
 #This is important to do when your model has a lot of explanatory variables

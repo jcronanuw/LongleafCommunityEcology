@@ -120,15 +120,20 @@ siteBiomass6 <- siteBiomass5[,!colnames(siteBiomass5) %in% c("so")]
 spp_drop <- drop.var(siteBiomass6, min.fo = 1)#biostats
 
 #Show taxa that were dropped:
+
 dropped <- match(colnames(siteBiomass6), colnames(spp_drop))
-cbind(colnames(siteBiomass6), dropped)
-length(dropped)
-length(dropped) - length(dropped[is.na(dropped) == T])
+#cbind(colnames(siteBiomass6), dropped)
+#length(dropped)
+#length(dropped) - length(dropped[is.na(dropped) == T])
+
 #dropped seven genus. From 40 to 33.
 
 #Drop columns not classified at the genus level
-cbind(1:length(spp_drop[1,]), colnames(spp_drop))
+
+#cbind(1:length(spp_drop[1,]), colnames(spp_drop))
+
 gen <- spp_drop[,-c(12, 16, 28)]#forbs, grasses, and shrubs
+
 #there were no species or genus in here that were abundant at any given site
 #so I feel comfortable dropping them. I.e., they probably would have been dropped because they occur
 #at less than 10% of sites.
@@ -141,43 +146,55 @@ gen <- spp_drop[,-c(12, 16, 28)]#forbs, grasses, and shrubs
 #5a: Summary stats for biomass data
 
 #Summary stats
-round(stat.desc(gen),2)
+#round(stat.desc(gen),2)
 
 #Look at how data is distributed
-foa.plots(gen)
+#foa.plots(gen)
 
 #Drop rare genus < 10% of sites.
 gco <- drop.var(gen, min.po=10)
 
 #Check to see how many genus were dropped for untransformed biomass data
-length(gen[1,])#
-length(gco[1,])#
+
+#length(gen[1,])#
+#length(gco[1,])#
 #30 to 19 variables (11 drops) for genus-level data
 
-str(gco)#21 obs and 19 variables
+#Check dimensions of dataset
+
+#str(gco)
+#21 obs and 19 variables
 
 #uv.plots displays histogram, box and whisker, cumulative distribution and normal q-q plots
 #in one pane for each variable.
-uv.plots(gco)#Many genus are right skewed with a long right tail. 
+
+#uv.plots(gco)
+
+#Many genus are right skewed with a long right tail. 
 #Conduct a log tranformation
 
 #What percent of values are zero, if it is over 50% you should consider changing the data
 #to presence/absence
-length(gco[gco == 0])/(length(gco[1,])*length(gco[,1]))
+
+#length(gco[gco == 0])/(length(gco[1,])*length(gco[,1]))
+
 #~40% zero values >>> no need to convert data to presence/absence
 
 #Look at correlation between genus variables.
 #generate table (you need to run correlation_matrix() function for this to work:
 #https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
-scm <- correlation_matrix(as.data.frame(gco), type = "pearson", show_significance = T, 
+
+scm.gco <- correlation_matrix(as.data.frame(gco), type = "pearson", show_significance = T, 
                          digits = 2, use = "lower", replace_diagonal = T)
-chart.Correlation(gco, method = "pearson")#performanceAlanlytics
+#chart.Correlation(gco, method = "pearson")#performanceAlanlytics
 
 #log transform genera data.
 gco_log <- decostand(gco, method = "log")
 
 #Check distributions
-uv.plots(gco_log)
+
+#uv.plots(gco_log)
+
 #Improved for several species, but not these:
 #Aronia
 #Cyrilla
@@ -192,8 +209,11 @@ uv.plots(gco_log)
 
 #Hellinger transformation on genera data
 gco_hel <- decostand(gco, method = "hellinger")
+
 #Check distributions
-uv.plots(gco_hel)
+
+#uv.plots(gco_hel)
+
 #Improvement over log transformation but skew is still to the right
 #for all of the genera listed in the log transformation.
 
@@ -201,11 +221,13 @@ uv.plots(gco_hel)
 #6c: Summary stats for environmental data
 
 #Show how environmental variables are correlated.
-chart.Correlation(siteEnv3)
-scm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_significance = T, 
+
+scm.env <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_significance = T, 
                           digits = 2, use = "lower", replace_diagonal = T)
+#chart.Correlation(siteEnv3)
+
 #Use 0.55 as cut-off for removing variables with high colinearity 
-#Sort of arbitrary, but chose (Adam et al. 2013).
+#Sort of arbitrary, but chose cutoff used in Adam et al. 2013.
 #Variables with correlation >= 0.55
 #1) 10-yr and 20-yr mFRI
 #drop 10-yr
@@ -220,7 +242,10 @@ scm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_signif
 #region as a conditional constraint.
 
 #Remove env. variables selected above
-siteEnv4 <- siteEnv3[,-c(6,9)]#dropping the 10-yr values for mean fire return
+
+siteEnv4 <- siteEnv3[,-c(6,9)]
+
+#dropping the 10-yr values for mean fire return
 #interval and ratio of growing:dormant season burns.
 
 #Create a new vector with two regions (east and west) instead of 3 (SMNWR, APNF, and EAFB).
@@ -228,8 +253,10 @@ region <- as.factor(ifelse(siteEnv3$Region == 3, 2, siteEnv3$Region))
 
 #Check distributions of environmental data
 #Remove categories
+
 check_env <- siteEnv4[,-c(9,10)]
-uv.plots(check_env)
+#uv.plots(check_env)
+
 #Right skewed
 #1) Coarse DWD
 #2) Std Dev on 20-year fire regime
@@ -252,8 +279,10 @@ env <- data.frame(canopy = siteEnv4$Canopy,
                   region = as.factor(region))
 rownames(env) <- rownames(siteEnv4)
 
+#Check distribution of env data with log-transformed variables.
 
-uv.plots(env)#looks good
+#uv.plots(env)
+#looks good
 
 #multivariate outliers
 #this function if from biostats and I'm not sure how it selects outliers so I am going
@@ -267,11 +296,11 @@ uv.plots(env)#looks good
 #That number is a bit arbitrary. If it was 2.5 you wouldn't have any outliers
 
 #Environmental data
-mv.outliers(env[1:7], method = "euclidean", sd.limit =2)#S330
+#mv.outliers(env[1:7], method = "euclidean", sd.limit =2)#S330
 
 
 #biomass
-mv.outliers(gco_log, method = "bray", sd.limit =2)#S330 & E103BB_S3 for gco_hel and S330 for gco_log
+#mv.outliers(gco_log, method = "bray", sd.limit =2)#S330 & E103BB_S3 for gco_hel and S330 for gco_log
 
 #Drop S330 because it is an outier within the environmental dataset. This will also create a balanced
 #sample design for regional blocks and allow me to randomize within regions for the RDA with region
@@ -311,20 +340,30 @@ hseco <- mapply(function(x) {length(dTable[,3][dTable[,3] == udom[x]])}, 1:lengt
 hdom <- data.frame(Species = I(udom), Primary = hprim, Secondary = hseco)
 h2dom <- hdom[order(hdom[,2], decreasing = T),]
 
-par(mai = c(2.5,1.2,1,1))
-barplot(t(cbind(h2dom$Primary,h2dom$Secondary)), main = "", 
-        xaxt = "n", ylab = "Number of sites", xlab = "", axes = F, beside = T, 
-        col = c("white", "dark grey"))
-axis(2)
-text(matrix(c(seq(2,nrow(h2dom)*3,3), rep(-0.25,nrow(h2dom))), nrow = nrow(h2dom), 
-            ncol = 2, byrow = F), srt = 60, adj = 1, xpd = T, labels = paste(h2dom$Species), 
-     cex = 0.95)
-
-legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "dark grey"), bty = "n")
+#Generate plot of primary and secondary dominant genera
+#par(mai = c(2.5,1.2,1,1))
+#barplot(t(cbind(h2dom$Primary,h2dom$Secondary)), main = "", 
+#        xaxt = "n", ylab = "Number of sites", xlab = "", axes = F, beside = T, 
+#        col = c("white", "dark grey"))
+#axis(2)
+#text(matrix(c(seq(2,nrow(h2dom)*3,3), rep(-0.25,nrow(h2dom))), nrow = nrow(h2dom), 
+#            ncol = 2, byrow = F), srt = 60, adj = 1, xpd = T, labels = paste(h2dom$Species), 
+#     cex = 0.95)
+#legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "dark grey"), bty = "n")
 
 #Summary stats in results section
 gss <- round(stat.desc(gco),2)
-sort(gss[9,])
+#sort(gss[9,])
+
+#Generate more specific data used in discussion section
+aris <- data.frame(mfri = env$mfri, ARIS = gco$ARIS)
+
+#Show loading for specified mfri window used in boundary layer regressions
+#ARIS
+mfri.min <- 3.0#low end of mfri (nearest whole number)
+mfri.max <- 4.0#high end of mfri (nearest whole number)
+sort(aris$ARIS[aris$mfri > mfri.min & aris$mfri <= mfri.max ], decreasing = T)
+
 
 ###################################################################################################
 ###################################################################################################
@@ -360,6 +399,13 @@ pca
 summary(pca)
 scores(pca, choices = 1:3)
 
+scores_1 <- scores(pca)
+sc <- scores_1$sites[,2]
+plot(sc, env$mfri)
+plot(sc, env$coarseWD)
+cor(sc, env$mfri, method = "pearson")
+cor(sc, env$coarseWD, method = "pearson")
+?cor
 #Biplot for PCA show labels on sites.
 biplot(pca)
 
@@ -479,6 +525,11 @@ vif.cca(gen_rda_1)
 #Show terms and order they were added to model
 #They will be listed in order (top to bottom > first to lest variable)
 gen_rda_1$anova
+
+scores_1 <- scores(gen_rda_1)
+sc <- scores_1$sites[,2]
+plot(sc, env$mfri)
+plot(sc, env$coarseWD)
 
 #Stepwise with adjusted R2 -- forward selection
 #This is important to do when your model has a lot of explanatory variables

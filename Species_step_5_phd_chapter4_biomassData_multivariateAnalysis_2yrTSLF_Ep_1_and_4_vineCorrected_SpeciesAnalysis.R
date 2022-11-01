@@ -178,39 +178,64 @@ rownames(siteBiomass3) <- siteBiomass2[,1]
 
 ###################################################################################################
 ###################################################################################################
-#STEP #5: DATA FORMATTING/SCREENING
+#STEP #5: DATASET ADJUSTMENTS
+
+###################################################################################################
+#Standardize row order of data sets (i.e. order site names (row names) of biological data 
+#according to order in environmental data set) and remove columns with no values > 0. 
+
+#Reorder biological data (biomass) so sites are in same order as environmental data
+#Step not necessary for cover data... sites are already in same order as environmental data.
+ro <- data.frame(siteNo = 1:length(rownames(siteEnv3)), siteName = I(rownames(siteEnv3)))
+ro2 <- ro[order(ro[,2]),]
+
+#Untranformed biomass data
+siteBiomass4 <- data.frame(so = ro2[,1], siteBiomass3)
+siteBiomass5 <- siteBiomass4[order(siteBiomass4$so),]
+siteBiomass6 <- siteBiomass5[,!colnames(siteBiomass5) %in% c("so")]
+
+###################################################################################################
+###################################################################################################
+#STEP #6: DATA FORMATTING/SCREENING
 
 #hand off object name.
-spo <- siteBiomass3
+spo <- siteBiomass6
 
 #Show summary stats
 sss <- round(stat.desc(spo),2)
 
 #Mean biomass values for all sites for all species ordered from highest to lowest
-sort(sss['mean',], decreasing = T)
+
+#sort(sss['mean',], decreasing = T)
 
 #Average biomass for dwarf line oak
-sp <- "LYFE"
-sss['mean',sp]
-sss['SE.mean',sp]
+
+#sp <- "LYFE"
+#sss['mean',sp]
+#sss['SE.mean',sp]
 
 #Percent of total understory (living) biomass for QUMI2
-round(mean((spo$QUMI2/site_mean$mean)*100),1)
+
+#round(mean((spo$QUMI2/site_mean$mean)*100),1)
 
 
 #uv.plots displays histogram, box and whisker, cumulative distribution and normal q-q plots
 #in one pane for each variable.
-uv.plots(spo)#Many species are right skewed with a long right tail. To reduce the effect of these outliers use log-transformed data.
+
+#uv.plots(spo)#Many species are right skewed with a long right tail. To reduce the effect of these outliers use log-transformed data.
 
 #What percent of values are zero, if it is over 50% you should consider changing the data
 #to presence/absence
-length(spo[spo == 0])/(length(spo[1,])*length(spo[,1]))
+
+#length(spo[spo == 0])/(length(spo[1,])*length(spo[,1]))
+
 #64% zero values
 
 #Look at correlation between species variables.
 #generate table (you need to run correlation_matrix() function for this to work:
 #https://www.r-bloggers.com/2020/07/create-a-publication-ready-correlation-matrix-with-significance-levels-in-r/
-scm <- correlation_matrix(as.data.frame(spo), type = "pearson", show_significance = T, 
+
+scm.spo <- correlation_matrix(as.data.frame(spo), type = "pearson", show_significance = T, 
                          digits = 2, use = "lower", replace_diagonal = T)
 chart.Correlation(spo, method = "pearson")#performanceAlanlytics
 
@@ -218,9 +243,9 @@ chart.Correlation(spo, method = "pearson")#performanceAlanlytics
 #6c: Summary stats for environmental data
 
 #Show how environmental variables are correlated.
-chart.Correlation(siteEnv3)
-ecm <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_significance = T, 
+scm.env <- correlation_matrix(as.data.frame(siteEnv3), type = "pearson", show_significance = T, 
                           digits = 2, use = "lower", replace_diagonal = T)
+#chart.Correlation(siteEnv3)
 
 #Show dominant species
 
@@ -244,20 +269,19 @@ hseco <- mapply(function(x) {length(dTable[,3][dTable[,3] == udom[x]])}, 1:lengt
 hdom <- data.frame(Species = I(udom), Primary = hprim, Secondary = hseco)
 h2dom <- hdom[order(hdom[,2], decreasing = T),]
 
-par(mai = c(2.5,1.2,1,1))
-barplot(t(cbind(h2dom$Primary,h2dom$Secondary)), main = "", 
-        xaxt = "n", ylab = "Number of sites", xlab = "", axes = F, beside = T, 
-        col = c("white", "dark grey"))
-axis(2)
-text(matrix(c(seq(2,nrow(h2dom)*3,3), rep(-0.25,nrow(h2dom))), nrow = nrow(h2dom), 
-            ncol = 2, byrow = F), srt = 60, adj = 1, xpd = T, labels = paste(h2dom$Species), 
-     cex = 0.95)
-
-legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "dark grey"), bty = "n")
+#Generate plot that shows primary and secondary dominance at each site
+#par(mai = c(2.5,1.2,1,1))
+#barplot(t(cbind(h2dom$Primary,h2dom$Secondary)), main = "", 
+#        xaxt = "n", ylab = "Number of sites", xlab = "", axes = F, beside = T, 
+#        col = c("white", "dark grey"))
+#axis(2)
+#text(matrix(c(seq(2,nrow(h2dom)*3,3), rep(-0.25,nrow(h2dom))), nrow = nrow(h2dom), 
+#            ncol = 2, byrow = F), srt = 60, adj = 1, xpd = T, labels = paste(h2dom$Species), 
+#     cex = 0.95)
+#legend(15,6, c("Highest biomass", "Second highest biomass"), fill = c("white", "dark grey"), bty = "n")
 
 #Show chart of biomass for the 10 most common species
 
-#Calculate untransformed means for site-level data 
 #Caluclate mean biomass for each species
 mean_biomass <- apply(spo, 2, mean)
 
@@ -290,19 +314,28 @@ t10_vec <- data.frame(species = t10_spp, biomass = t10_biomass)
 new_order <- with(t10_vec, reorder(species, biomass, mean , na.rm=T))
 
 #Generate box plot
-boxplot(t10_vec$biomass ~ new_order)
+
+#boxplot(t10_vec$biomass ~ new_order)
 
 #ARST5
 wg <- data.frame(site = rownames(spo), ARST5 = round(spo$ARST5,2), mfri = siteEnv3$mfri_20yr)
-wg[order(wg$mfri),]
+#wg[order(wg$mfri),]
+#wg[order(wg$ARST5),]
 
 #ANGL10
 bs <- data.frame(site = rownames(spo), ANGL10 = round(spo$ANGL10,2), mfri = siteEnv3$mfri_20yr)
-bs[order(bs$mfri),]
+#bs[order(bs$mfri),]
+#bs[order(bs$ANGL10),]
+
+#VADA
+db <- data.frame(site = rownames(spo), VADA = round(spo$VADA,2), mfri = siteEnv3$mfri_20yr)
+#db[order(db$mfri),]
+#db[order(db$VADA),]
+
 
 #GESE
 yj <- data.frame(site = rownames(spo), GESE = round(spo$GESE,2), gd = siteEnv3$Season_20yr)
-yj[order(yj$gd),]
+#yj[order(yj$gd),]
 
 
 ###################################################################################################
@@ -370,7 +403,7 @@ blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
 #Wiregrass
 #Plot with sites
 species <- ab2mat$ARST5
-speciesLabel <- "Aristida stricta"
+speciesLabel <- "Aristida beyrichiana"
 
 #Boundary layer regression
 blr(model, dec, xcoord, ev, species, speciesLabel, envLabel)
